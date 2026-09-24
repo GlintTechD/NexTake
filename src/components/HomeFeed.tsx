@@ -10,7 +10,6 @@ import {
   LATEST_DISPATCHES,
   DOMAIN_TOPICS,
   OPERATORS_LIST,
-  COMPANIES_LIST,
 } from '../data/mockData';
 
 // ── Team member asset imports ──────────────────────────────────────────────
@@ -979,7 +978,7 @@ useEffect(() => {
           <h3 className="text-xs font-mono text-slate-400 tracking-wider font-semibold mb-3">
             Operators &amp; Researchers
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {TEAM_MEMBERS.map((op) => (
               <a
                 key={op.id}
@@ -1009,36 +1008,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Enterprises */}
-        <div>
-          <h3 className="text-xs font-mono text-slate-400 tracking-wider font-semibold mb-3">
-            Enterprises &amp; Startups
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {COMPANIES_LIST.slice(0, 4).map((co) => {
-              return (
-                <div
-                  key={co.id}
-                  className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center gap-2.5"
-                >
-                  <div className="flex items-center space-x-2.5 truncate flex-1">
-                    <div className="w-9 h-9 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">
-                      {co.tag}
-                    </div>
-                    <div className="truncate">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">
-                        {co.name}
-                      </h4>
-                      <p className="text-[10px] text-slate-500 truncate">
-                        {co.badge} • {co.valuation}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </section>
 
       {/* 10. STAY AHEAD OF WHAT\'S NEXT (Newsletter CTA - matching 6.png) */}
