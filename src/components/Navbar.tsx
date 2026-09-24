@@ -1,7 +1,6 @@
 import React from 'react';
 import { ScreenView } from '../types';
 import { Search, Bookmark, Check, Shield, Bell, User } from 'lucide-react';
-import logo from "../Pic/Logo.png";
 
 interface NavbarProps {
   currentScreen: ScreenView;
@@ -34,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             id="brand-logo-btn"
           >
             <span className="text-xl sm:text-2xl font-black tracking-tighter text-white group-hover:text-emerald-400 transition-colors w-30">
-             <img src={logo} alt="" />
+             <img src="/nextake-logo-transparent.png" alt="NextTake — Technology News. Intelligently Curated." className="w-full h-auto bg-transparent" />
             </span>
           </button>
         </div>
