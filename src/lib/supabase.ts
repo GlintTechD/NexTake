@@ -1,9 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
 // --------------------------------------
 // Article Types
@@ -27,6 +30,7 @@ export interface Article {
   status?: string;
   created_at?: string;
   heroAperture?: string;
+  hero_priority?: number | null;
 }
 
 // --------------------------------------
@@ -44,6 +48,8 @@ export interface DailyEditItem {
 }
 
 export async function getDailyEditItems(): Promise<DailyEditItem[]> {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("daily_tips")
     .select("*")
@@ -133,6 +139,8 @@ export interface DailyEditSettings {
 }
 
 export async function getDailyEditSettings(): Promise<DailyEditSettings | null> {
+  if (!supabase) return null;
+
   const { data, error } = await supabase
     .from("daily_edit_settings")
     .select("*")
@@ -164,6 +172,8 @@ export interface LatestArticle {
 }
 
 export async function getLatestArticles(): Promise<LatestArticle[]> {
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from("articles")
     .select("*")
@@ -193,7 +203,7 @@ export async function getLatestArticles(): Promise<LatestArticle[]> {
 // --------------------------------------
 
 export async function getArticleById(id: string): Promise<Article | null> {
-  if (!id) return null;
+  if (!id || !supabase) return null;
 
   const { data, error } = await supabase
     .from("articles")
@@ -208,4 +218,21 @@ export async function getArticleById(id: string): Promise<Article | null> {
   }
 
   return data as Article | null;
+}
+
+export async function getPublishedBigStories(): Promise<Article[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error loading Big Stories:", error);
+    return [];
+  }
+
+  return (data ?? []) as Article[];
 }

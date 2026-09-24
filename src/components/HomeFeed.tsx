@@ -15,6 +15,8 @@ import {
 
 import {
   getLatestArticles,
+  getPublishedBigStories,
+  type Article as SupabaseArticle,
   type LatestArticle,
 } from "../lib/supabase";
 
@@ -55,6 +57,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   const [latestArticles, setLatestArticles] = useState<LatestArticle[]>([]);
 const [latestLoading, setLatestLoading] = useState(true);
+  const [publishedBigStories, setPublishedBigStories] = useState<SupabaseArticle[]>([]);
 
 const [activeCategoryTab, setActiveCategoryTab] = useState("All");
 
@@ -121,6 +124,43 @@ useEffect(() => {
 
   loadLatestArticles();
 }, []);
+
+useEffect(() => {
+  let isMounted = true;
+
+  const loadBigStories = async () => {
+    const stories = await getPublishedBigStories();
+    if (isMounted) setPublishedBigStories(stories);
+  };
+
+  void loadBigStories();
+  const refreshTimer = window.setInterval(loadBigStories, 24 * 60 * 60 * 1000);
+
+  return () => {
+    isMounted = false;
+    window.clearInterval(refreshTimer);
+  };
+}, []);
+
+  const activeBigStory = (() => {
+    if (publishedBigStories.length === 0) return BIG_STORY;
+
+    const story = publishedBigStories[0];
+    const description = story.excerpt ?? story.description ?? "";
+
+    return {
+      id: story.id,
+      tag: story.category ?? "Technology",
+      meta: `By ${story.author ?? "NexTake Editorial"} • ${story.read_time ?? story.readTime ?? "5 min read"}`,
+      title: story.title,
+      description,
+      takeaways: [
+        { num: "01", label: "What happened", text: description },
+        { num: "02", label: "Why it matters", text: story.content ?? description },
+        { num: "03", label: "Read the full brief", text: "Open the complete story for the full context and analysis." },
+      ],
+    };
+  })();
 const filteredArticles = latestArticles.filter((article) => {
   const matchesCategory =
     activeCategoryTab === "All" ||
@@ -356,25 +396,25 @@ useEffect(() => {
             {/* Left Narrative */}
             <div className="lg:col-span-7 space-y-4">
               <div className="text-xs font-mono text-slate-500 font-medium">
-                <span className="text-emerald-700 font-bold">{BIG_STORY.tag}</span>
+                <span className="text-emerald-700 font-bold">{activeBigStory.tag}</span>
                 <span className="mx-2">•</span>
-                <span>{BIG_STORY.meta}</span>
+                <span>{activeBigStory.meta}</span>
               </div>
 
               <h3
-                onClick={() => onNavigate('article')}
+                onClick={() => onNavigate('article', activeBigStory.id)}
                 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors cursor-pointer leading-tight"
               >
-                {BIG_STORY.title}
+                {activeBigStory.title}
               </h3>
 
               <p className="text-slate-600 text-sm leading-relaxed">
-                {BIG_STORY.description}
+                {activeBigStory.description}
               </p>
 
               <div>
                 <button
-                  onClick={() => onNavigate('article')}
+                  onClick={() => onNavigate('article', activeBigStory.id)}
                   className="inline-flex items-center space-x-2 px-4 py-2 rounded bg-slate-950 text-white text-xs font-mono font-bold hover:bg-emerald-600 transition-colors"
                 >
                   <span>Read the full breakdown</span>
@@ -384,7 +424,7 @@ useEffect(() => {
 
               {/* 3 Takeaway Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
-                {BIG_STORY.takeaways.map((takeaway) => (
+                {activeBigStory.takeaways.map((takeaway) => (
                   <div
                     key={takeaway.num}
                     className="p-3 rounded bg-slate-50 border border-slate-200 text-xs"
