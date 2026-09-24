@@ -2,22 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenView } from '../types';
 import { HeroSlideshow } from './HeroSlideshow';
+import { RecommendationRail } from './RecommendationRail';
+import { getPublishedArticles } from '../lib/articles';
+import { isSupabaseConfigured } from '../lib/supabase';
 import {
   FEATURED_ARTICLE,
   SHORTS_LIST,
   FEATURED_INTERVIEW,
+  DAILY_EDIT_ITEMS,
   BIG_STORY,
   LATEST_DISPATCHES,
   DOMAIN_TOPICS,
   OPERATORS_LIST,
   COMPANIES_LIST,
 } from '../data/mockData';
-
-import {
-  getLatestArticles,
-  type LatestArticle,
-} from "../lib/supabase";
-
 import {
   ArrowRight,
   Bookmark,
@@ -31,10 +29,6 @@ import {
   Plus,
   ExternalLink,
 } from 'lucide-react';
-import {
-  getDailyEditItems,
-  type DailyEditItem,
-} from '../lib/supabase';
 
 interface HomeFeedProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
@@ -51,19 +45,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   onOpenDailyEdit,
   onOpenContact,
 }) => {
-
-
-  const [latestArticles, setLatestArticles] = useState<LatestArticle[]>([]);
-const [latestLoading, setLatestLoading] = useState(true);
-
-const [activeCategoryTab, setActiveCategoryTab] = useState("All");
-
-const [selectedTopic, setSelectedTopic] = useState("All Topics");
-const [selectedType, setSelectedType] = useState("All Types");
-
-const [searchQuery, setSearchQuery] = useState("");
-
-
+  const [activeCategoryTab, setActiveCategoryTab] = useState('All');
   const [followedOperators, setFollowedOperators] = useState<Record<string, boolean>>({
     'op-patrick': true,
   });
@@ -71,8 +53,26 @@ const [searchQuery, setSearchQuery] = useState("");
   const [tickerIndex, setTickerIndex] = useState(0);
   const [emailInput, setEmailInput] = useState('');
   const [emailSubscribed, setEmailSubscribed] = useState(false);
-  const [dailyEditItems, setDailyEditItems] = useState<DailyEditItem[]>([]);
-  const [dailyEditLoading, setDailyEditLoading] = useState(true);
+  const [bigStoryArticle, setBigStoryArticle] = useState<any>(null);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    getPublishedArticles()
+      .then((publishedArticles) => setBigStoryArticle(publishedArticles[0] ?? null))
+      .catch((error) => console.error('Failed to load the big story:', error));
+  }, []);
+
+  const bigStory = bigStoryArticle
+    ? {
+        ...BIG_STORY,
+        id: bigStoryArticle.id,
+        tag: bigStoryArticle.category,
+        meta: `By ${bigStoryArticle.author || 'Next Edit'} • ${bigStoryArticle.read_time || '5 min read'}`,
+        title: bigStoryArticle.title,
+        description: bigStoryArticle.excerpt,
+      }
+    : BIG_STORY;
 
   const tickerAlerts = [
     '#842 Real-time protocol telemetry: Anthropic & DeepMind release architectural proofs',
@@ -107,66 +107,6 @@ const [searchQuery, setSearchQuery] = useState("");
       setEmailInput('');
     }
   };
-useEffect(() => {
-  const loadLatestArticles = async () => {
-    setLatestLoading(true);
-
-    const articles = await getLatestArticles();
-
-    console.log("Published articles:", articles);
-
-    setLatestArticles(articles);
-    setLatestLoading(false);
-  };
-
-  loadLatestArticles();
-}, []);
-const filteredArticles = latestArticles.filter((article) => {
-  const matchesCategory =
-    activeCategoryTab === "All" ||
-    article.category.toLowerCase() ===
-      activeCategoryTab.toLowerCase();
-
-  const matchesTopic =
-    selectedTopic === "All Topics" ||
-    article.topic.toLowerCase() ===
-      selectedTopic.toLowerCase();
-
-  const matchesType =
-    selectedType === "All Types" ||
-    article.type.toLowerCase() ===
-      selectedType.toLowerCase();
-
-  const query = searchQuery.trim().toLowerCase();
-
-  const matchesSearch =
-    !query ||
-    article.title.toLowerCase().includes(query) ||
-    article.description.toLowerCase().includes(query) ||
-    article.category.toLowerCase().includes(query) ||
-    article.topic.toLowerCase().includes(query);
-
-  return (
-    matchesCategory &&
-    matchesTopic &&
-    matchesType &&
-    matchesSearch
-  );
-});
-useEffect(() => {
-  const loadDailyEdit = async () => {
-    setDailyEditLoading(true);
-
-    const items = await getDailyEditItems();
-
-    console.log("Daily Editorial from Supabase:", items);
-
-    setDailyEditItems(items);
-    setDailyEditLoading(false);
-  };
-
-  loadDailyEdit();
-}, []);
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
@@ -195,6 +135,8 @@ useEffect(() => {
         onToggleSave={onToggleSave}
       />
 
+      <RecommendationRail onNavigate={onNavigate} />
+
       {/* 3. YOUR DAILY EDIT - 5 things worth knowing today */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-b border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-slate-200 gap-2">
@@ -219,52 +161,37 @@ useEffect(() => {
 
         {/* 5 Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-         {dailyEditLoading ? (
-  <div className="col-span-full py-10 text-center">
-    <p className="text-xs font-mono text-slate-400">
-      Loading today's editorial...
-    </p>
-  </div>
-) : dailyEditItems.length === 0 ? (
-  <div className="col-span-full py-10 text-center">
-    <p className="text-xs font-mono text-slate-400">
-      No published editorial stories available.
-    </p>
-  </div>
-) : (
-  dailyEditItems.map((item) => (
-    <div
-      key={item.id}
-     
-      className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
-    >
-      <div>
-        <div className="flex items-center justify-between text-xs font-mono mb-2">
-          <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
-            {item.num}
-          </span>
+          {DAILY_EDIT_ITEMS.map((item) => (
+            <div
+              key={item.num}
+              onClick={() => onNavigate('article')}
+              className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
+            >
+              <div>
+                <div className="flex items-center justify-between text-xs font-mono mb-2">
+                  <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
+                    {item.num}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                    {item.tag}
+                  </span>
+                </div>
 
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-            {item.tag}
-          </span>
-        </div>
+                <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
+                  {item.title}
+                </h3>
 
-        <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
-          {item.title}
-        </h3>
+                <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
 
-        <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
-          {item.description}
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
-        <span>{item.timeAgo}</span>
-        <span>{item.readTime}</span>
-      </div>
-    </div>
-  ))
-)}
+              <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
+                <span>{item.timeAgo}</span>
+                <span>{item.readTime}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -356,25 +283,25 @@ useEffect(() => {
             {/* Left Narrative */}
             <div className="lg:col-span-7 space-y-4">
               <div className="text-xs font-mono text-slate-500 font-medium">
-                <span className="text-emerald-700 font-bold">{BIG_STORY.tag}</span>
+                <span className="text-emerald-700 font-bold">{bigStory.tag}</span>
                 <span className="mx-2">•</span>
-                <span>{BIG_STORY.meta}</span>
+                <span>{bigStory.meta}</span>
               </div>
 
               <h3
-                onClick={() => onNavigate('article')}
+                onClick={() => onNavigate('article', bigStory.id)}
                 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors cursor-pointer leading-tight"
               >
-                {BIG_STORY.title}
+                {bigStory.title}
               </h3>
 
               <p className="text-slate-600 text-sm leading-relaxed">
-                {BIG_STORY.description}
+                {bigStory.description}
               </p>
 
               <div>
                 <button
-                  onClick={() => onNavigate('article')}
+                  onClick={() => onNavigate('article', bigStory.id)}
                   className="inline-flex items-center space-x-2 px-4 py-2 rounded bg-slate-950 text-white text-xs font-mono font-bold hover:bg-emerald-600 transition-colors"
                 >
                   <span>Read the full breakdown</span>
@@ -384,7 +311,7 @@ useEffect(() => {
 
               {/* 3 Takeaway Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
-                {BIG_STORY.takeaways.map((takeaway) => (
+                {bigStory.takeaways.map((takeaway) => (
                   <div
                     key={takeaway.num}
                     className="p-3 rounded bg-slate-50 border border-slate-200 text-xs"
@@ -514,104 +441,72 @@ useEffect(() => {
           </div>
 
           <div className="flex items-center space-x-2 text-xs font-mono">
-           <select
-  value={selectedTopic}
-  onChange={(e) => setSelectedTopic(e.target.value)}
-  className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
->
-  <option>All Topics</option>
-  <option>Deep Learning</option>
-  <option>Venture Capital</option>
-  <option>Silicon Fabs</option>
-</select>
-           <select
-  value={selectedType}
-  onChange={(e) => setSelectedType(e.target.value)}
-  className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
->
-  <option>All Types</option>
-  <option>Dispatches</option>
-  <option>Monographs</option>
-  <option>Interviews</option>
-</select>
+            <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400">
+              <option>All Topics</option>
+              <option>Deep Learning</option>
+              <option>Venture Capital</option>
+              <option>Silicon Fabs</option>
+            </select>
+            <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400">
+              <option>All Types</option>
+              <option>Dispatches</option>
+              <option>Monographs</option>
+              <option>Interviews</option>
+            </select>
           </div>
         </div>
 
         {/* Latest Dispatches List */}
         <div className="space-y-4">
-  {latestLoading ? (
-    <div className="py-10 text-center">
-      <p className="text-sm font-mono text-slate-400">
-        Loading stories...
-      </p>
-    </div>
-  ) : filteredArticles.length === 0 ? (
-    <div className="py-10 text-center border border-dashed border-slate-200 rounded-lg">
-      <p className="text-sm font-mono text-slate-400">
-        No stories match your filters.
-      </p>
-    </div>
-  ) : (
-    filteredArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => onNavigate("article", article.id)}
-        className="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
-      >
-        <div className="space-y-1.5 max-w-3xl">
-          <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-              {article.category}
-            </span>
+          {LATEST_DISPATCHES.map((dispatch) => (
+            <div
+              key={dispatch.id}
+              onClick={() => onNavigate('article')}
+              className="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
+            >
+              <div className="space-y-1.5 max-w-3xl">
+                <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
+                  <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                    {dispatch.category}
+                  </span>
+                  <span>•</span>
+                  <span>{dispatch.timeAgo}</span>
+                  <span>•</span>
+                  <span>{dispatch.readTime}</span>
+                </div>
 
-            <span>•</span>
+                <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                  {dispatch.title}
+                </h3>
 
-            <span>{article.timeAgo}</span>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {dispatch.description}
+                </p>
+              </div>
 
-            <span>•</span>
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSave(dispatch.id);
+                  }}
+                  className={`p-2 rounded border transition-colors ${
+                    isSaved(dispatch.id)
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
+                      : 'text-slate-400 hover:text-slate-700 border-slate-200'
+                  }`}
+                  title="Save Story"
+                >
+                  <Bookmark className="w-4 h-4 fill-current" />
+                </button>
 
-            <span>{article.readTime}</span>
-          </div>
-
-          <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-            {article.title}
-          </h3>
-
-          <p className="text-xs text-slate-500 leading-relaxed">
-            {article.description}
-          </p>
+                <button className="px-3 py-1.5 rounded bg-slate-50 text-slate-700 group-hover:bg-slate-950 group-hover:text-white transition-colors text-xs font-mono font-bold flex items-center space-x-1">
+                  <span>Read →</span>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-
-        <div className="flex items-center space-x-2 shrink-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSave(article.id);
-            }}
-            className={`p-2 rounded border transition-colors ${
-              isSaved(article.id)
-                ? "bg-emerald-50 text-emerald-600 border-emerald-300"
-                : "text-slate-400 hover:text-slate-700 border-slate-200"
-            }`}
-            title="Save Story"
-          >
-            <Bookmark className="w-4 h-4 fill-current" />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate("article", article.id);
-            }}
-            className="px-3 py-1.5 rounded bg-slate-50 text-slate-700 group-hover:bg-slate-950 group-hover:text-white transition-colors text-xs font-mono font-bold flex items-center space-x-1"
-          >
-            <span>Read →</span>
-          </button>
-        </div>
-      </div>
-    ))
-  )}
-</div>
 
         <div className="text-center mt-8">
           <button
@@ -620,7 +515,9 @@ useEffect(() => {
           >
             <span>Load more stories ⤓</span>
           </button>
-          
+          <p className="text-[11px] font-mono text-slate-400 mt-2">
+            Showing 04-12 of 142 stories
+          </p>
         </div>
       </section>
 

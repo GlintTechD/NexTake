@@ -9,6 +9,7 @@ import {
 
 import { ScreenView, HeroSlideStory } from "../types";
 import { getPublishedArticles } from "../lib/articles";
+import { isSupabaseConfigured } from "../lib/supabase";
 import { HERO_SLIDESHOW_STORIES } from "../data/mockData";
 
 interface HeroSlideshowProps {
@@ -44,6 +45,24 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
       try {
         setIsLoading(true);
 
+        if (!isSupabaseConfigured) {
+          setArticles(
+            HERO_SLIDESHOW_STORIES.map((story) => ({
+              id: story.articleId,
+              category: story.category,
+              title: story.headline,
+              excerpt: story.summary,
+              image: story.image,
+              read_time: story.readTime,
+              created_at: new Date().toISOString(),
+              author: story.author.name,
+              avatar: story.author.avatar,
+            }))
+          );
+          setActiveIdx(0);
+          return;
+        }
+
         const data = await getPublishedArticles();
 
         setArticles(data);
@@ -63,42 +82,36 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
    * CONVERT SUPABASE ARTICLES TO HERO STORIES
    * =========================================================
    */
-  const stories: HeroSlideStory[] = articles.length
-    ? articles.map((article, index) => ({
-        id: article.id,
-        articleId: article.id,
+  const stories: HeroSlideStory[] = articles.map((article, index) => ({
+    id: article.id,
+    articleId: article.id,
 
-        number: String(index + 1).padStart(2, "0"),
+    number: String(index + 1).padStart(2, "0"),
 
-        category: article.category,
+    category: article.category,
 
-        headline: article.title,
+    headline: article.title,
 
-        summary: article.excerpt,
+    summary: article.excerpt,
 
-        date: article.created_at
-          ? new Date(article.created_at).toLocaleDateString()
-          : "",
+    image: article.image,
 
-        image: article.image,
+    readTime: article.read_time || "5 min read",
 
-        readTime: article.read_time || "5 min read",
+    updatedAgo: article.created_at
+      ? new Date(article.created_at).toLocaleDateString()
+      : "",
 
-        updatedAgo: article.created_at
-          ? new Date(article.created_at).toLocaleDateString()
-          : "",
+    imageAperture: "",
 
-        imageAperture: "",
-
-        author: {
-          name: article.author || "Next Edit",
-          role: article.author_role || "Contributor",
-          avatar:
-            article.avatar ||
-            "https://ui-avatars.com/api/?name=Next+Edit",
-        },
-      }))
-    : HERO_SLIDESHOW_STORIES;
+    author: {
+      name: article.author || "Next Edit",
+      role: article.author_role || "Contributor",
+      avatar:
+        article.avatar ||
+        "https://ui-avatars.com/api/?name=Next+Edit",
+    },
+  }));
 
   const totalSlides = stories.length;
   const currentStory = stories[activeIdx];

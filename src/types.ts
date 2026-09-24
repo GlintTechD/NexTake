@@ -181,6 +181,4 @@ export interface SearchResultItem {
   role?: string;
   episode?: string;
   duration?: string;
-  articleId?: string;
-  tags?: string[];
 }

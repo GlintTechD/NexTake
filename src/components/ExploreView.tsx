@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { ScreenView, SearchResultItem } from '../types';
 import {
-  ALL_EXPLORE_ITEMS,
+  SEARCH_RESULTS_FINTECH,
   DOMAIN_TOPICS,
   OPERATORS_LIST,
   COMPANIES_LIST,
@@ -9,15 +9,16 @@ import {
 import {
   Search,
   X,
+  SlidersHorizontal,
   Bookmark,
   ArrowRight,
   Play,
   Check,
+  Building2,
+  User,
   LayoutGrid,
   List,
-  FileText,
-  Users,
-  Building2,
+  Sparkles,
 } from 'lucide-react';
 
 interface ExploreViewProps {
@@ -53,48 +54,28 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     'Humanoid Dexterity',
   ];
 
-  const handleQueryClick = (q: string) => {
-    setSearchQuery(q);
-    setActiveFilterTab('ALL');
+  const togglePersonFollow = (name: string) => {
+    setFollowedPeople((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  // Filter items: first by query match (tags or category/title text), then by type tab
-  const queryFiltered = useMemo(() => {
-    if (!searchQuery.trim()) return ALL_EXPLORE_ITEMS;
-    const q = searchQuery.toLowerCase();
-    return ALL_EXPLORE_ITEMS.filter((item) => {
-      const tagMatch = item.tags?.some((t) => t.toLowerCase().includes(q));
-      const titleMatch = item.title.toLowerCase().includes(q);
-      const catMatch = item.category.toLowerCase().includes(q);
-      const summaryMatch = item.summary.toLowerCase().includes(q);
-      return tagMatch || titleMatch || catMatch || summaryMatch;
-    });
-  }, [searchQuery]);
+  const toggleOrgFollow = (name: string) => {
+    setFollowedOrgs((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
 
-  const filteredResults = useMemo(() => {
-    return queryFiltered.filter((item) => {
-      if (activeFilterTab === 'ALL') return true;
-      if (activeFilterTab === 'STORIES') return item.type === 'story';
-      if (activeFilterTab === 'PEOPLE') return item.type === 'operator';
-      if (activeFilterTab === 'COMPANIES') return item.type === 'dossier';
-      if (activeFilterTab === 'VIDEOS & SHORTS')
-        return item.type === 'short' || item.type === 'interview';
-      return true;
-    });
-  }, [queryFiltered, activeFilterTab]);
+  const handleQueryClick = (q: string) => {
+    setSearchQuery(q);
+  };
 
-  // Counts per tab for current query
-  const tabCounts = useMemo(() => ({
-    ALL: queryFiltered.length,
-    STORIES: queryFiltered.filter((i) => i.type === 'story').length,
-    PEOPLE: queryFiltered.filter((i) => i.type === 'operator').length,
-    COMPANIES: queryFiltered.filter((i) => i.type === 'dossier').length,
-    'VIDEOS & SHORTS': queryFiltered.filter((i) => i.type === 'short' || i.type === 'interview').length,
-  }), [queryFiltered]);
-
-  // Top result: first story with a badge or thumbnail
-  const topResult = filteredResults.find((i) => i.type === 'story' && (i.badge || i.thumbnail));
-  const gridItems = filteredResults.filter((i) => i !== topResult);
+  // Filter items based on activeFilterTab
+  const filteredResults = SEARCH_RESULTS_FINTECH.filter((item) => {
+    if (activeFilterTab === 'ALL') return true;
+    if (activeFilterTab === 'STORIES') return item.type === 'story';
+    if (activeFilterTab === 'PEOPLE') return item.type === 'operator';
+    if (activeFilterTab === 'COMPANIES') return item.type === 'dossier';
+    if (activeFilterTab === 'VIDEOS & SHORTS')
+      return item.type === 'short' || item.type === 'interview';
+    return true;
+  });
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
@@ -177,20 +158,20 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
           <div className="flex items-center space-x-2 text-xs text-slate-500">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            <span>{tabCounts.ALL} Results across 5 taxonomies (0.04s)</span>
+            <span>142 Results across 5 taxonomies (0.04s)</span>
           </div>
         </div>
 
-        {/* Taxonomy Filters & Sorters */}
+        {/* Taxonomy Filters & Sorters (matching 2.png) */}
         <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-b border-slate-200 text-xs font-mono">
           {/* Filter Pills */}
           <div className="flex flex-wrap items-center gap-1">
             {[
-              { id: 'ALL', label: 'All', count: tabCounts.ALL },
-              { id: 'STORIES', label: 'Stories', count: tabCounts.STORIES },
-              { id: 'PEOPLE', label: 'People', count: tabCounts.PEOPLE },
-              { id: 'COMPANIES', label: 'Companies', count: tabCounts.COMPANIES },
-              { id: 'VIDEOS & SHORTS', label: 'Videos & Shorts', count: tabCounts['VIDEOS & SHORTS'] },
+              { id: 'ALL', label: 'All', count: 142 },
+              { id: 'STORIES', label: 'Stories', count: 89 },
+              { id: 'PEOPLE', label: 'People', count: 14 },
+              { id: 'COMPANIES', label: 'Companies', count: 21 },
+              { id: 'VIDEOS & SHORTS', label: 'Videos & Shorts', count: 18 },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -208,6 +189,13 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
           {/* Sorters and View Mode */}
           <div className="flex items-center space-x-3">
+            <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none">
+              <option>Sector: All Subsectors</option>
+              <option>Layer-2 Protocols</option>
+              <option>Central Banking</option>
+              <option>Cross-Border Rails</option>
+            </select>
+
             <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none">
               <option>Date: Past 30 Days</option>
               <option>Past 24 Hours</option>
@@ -240,306 +228,318 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           </div>
         </div>
 
-        {/* 3. Results Grid / Layout - Dynamic */}
+        {/* 3. Results Grid / Layout (matching 2.png) */}
         <div className="py-8 space-y-6">
-
-          {/* Top Result Banner */}
-          {topResult && topResult.thumbnail && (
-            <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                <div className="lg:col-span-8 space-y-3">
-                  <div className="text-xs font-mono text-slate-400">
-                    {topResult.badge && (
-                      <span className="text-emerald-700 font-bold">{topResult.badge}</span>
-                    )}
-                    <span className="mx-2">•</span>
-                    <span>{topResult.category}</span>
-                  </div>
-
-                  <h3
-                    onClick={() => onNavigate('article', topResult.articleId)}
-                    className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors cursor-pointer leading-tight"
-                  >
-                    {topResult.title}
-                  </h3>
-
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    {topResult.summary}
-                  </p>
-
-                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1 pt-2 text-xs font-mono">
-                    {topResult.author && <span className="text-slate-500">{topResult.author}</span>}
-                    {topResult.readTime && (
-                      <><span className="text-slate-400">•</span><span className="text-slate-500">{topResult.readTime}</span></>
-                    )}
-                    {topResult.timeAgo && (
-                      <><span className="text-slate-400">•</span><span className="text-slate-500">{topResult.timeAgo}</span></>
-                    )}
-
-                    <div className="ml-auto flex items-center space-x-2">
-                      <button
-                        onClick={() => onNavigate('article', topResult.articleId)}
-                        className="px-4 py-2 rounded bg-slate-950 text-white font-bold hover:bg-emerald-600 transition-colors flex items-center space-x-1"
-                      >
-                        <span>Read story</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => onToggleSave(topResult.id)}
-                        className={`p-2 rounded border transition-colors ${
-                          savedIds.includes(topResult.id)
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
-                            : 'border-slate-300 text-slate-500 hover:text-slate-900'
-                        }`}
-                      >
-                        <Bookmark className="w-4 h-4 fill-current" />
-                      </button>
-                    </div>
-                  </div>
+          {/* Top Result Banner (Cross-Border Remittances) */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              <div className="lg:col-span-8 space-y-3">
+                <div className="text-xs font-mono text-slate-400">
+                  <span className="text-emerald-700 font-bold">
+                    Top result • In-depth report
+                  </span>
+                  <span className="mx-2">•</span>
+                  <span>Fintech • Dispatch #842</span>
                 </div>
 
-                <div className="lg:col-span-4">
-                  <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 aspect-video">
-                    <img
-                      src={topResult.thumbnail}
-                      alt={topResult.title}
-                      className="w-full h-full object-cover opacity-80"
-                    />
-                    <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-emerald-400 text-slate-950 px-2 py-0.5 rounded font-bold">
-                      Telemetry: Verified
-                    </span>
+                <h3
+                  onClick={() => onNavigate('article')}
+                  className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors cursor-pointer leading-tight"
+                >
+                  Cross-Border Remittances via Layer-2 Networks Surpass $10B Monthly Run Rate
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Low-fee rollups and zero-knowledge bridges dismantle legacy wire settlement margins across high-volume Latin America and Sub-Saharan corridors, forcing global tier-one banks into defensive infrastructure partnerships.
+                </p>
+
+                <div className="flex items-center space-x-4 pt-2 text-xs font-mono">
+                  <span className="text-slate-500">By Elena Vance</span>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-500">6 min read</span>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-500">2 hours ago</span>
+
+                  <div className="ml-auto flex items-center space-x-2">
+                    <button
+                      onClick={() => onNavigate('article')}
+                      className="px-4 py-2 rounded bg-slate-950 text-white font-bold hover:bg-emerald-600 transition-colors flex items-center space-x-1"
+                    >
+                      <span>Read story</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onToggleSave('search-top')}
+                      className={`p-2 rounded border transition-colors ${
+                        savedIds.includes('search-top')
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
+                          : 'border-slate-300 text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <Bookmark className="w-4 h-4 fill-current" />
+                    </button>
                   </div>
                 </div>
               </div>
+
+              {/* Graphic Thumbnail */}
+              <div className="lg:col-span-4">
+                <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 aspect-video">
+                  <img
+                    src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=600&q=80"
+                    alt="Network globe"
+                    className="w-full h-full object-cover opacity-80"
+                  />
+                  <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-emerald-400 text-slate-950 px-2 py-0.5 rounded font-bold">
+                    Telemetry: Verified
+                  </span>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
 
-          {/* No Results State */}
-          {filteredResults.length === 0 && (
-            <div className="text-center py-16">
-              <p className="text-slate-400 font-mono text-sm">No results found for "{searchQuery}"</p>
-              <button
-                onClick={() => { setSearchQuery(''); setActiveFilterTab('ALL'); }}
-                className="mt-4 px-4 py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono font-bold transition-colors"
-              >
-                Clear query
-              </button>
+          {/* Masonry / Grid Cards (matching 2.png) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Card 1: Story (Stripe Multi-Chain) */}
+            <div
+              onClick={() => onNavigate('article')}
+              className="bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-400 transition-all cursor-pointer flex flex-col justify-between group"
+            >
+              <div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
+                  <span className="text-slate-700 font-bold">Fintech • Protocol</span>
+                  <span>4m ago</span>
+                </div>
+
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
+                  Stripe Rolls Out Multi-Chain Autonomous Agent Accounts for Global Payroll
+                </h3>
+
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  Automated smart accounts permit algorithmic entities to execute sovereign cross-border contractor payouts with inline compliance escrow.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-3 border-t border-slate-100">
+                <span>5 min read</span>
+                <span className="text-slate-700 font-bold group-hover:text-emerald-700">
+                  Analyze ↗
+                </span>
+              </div>
             </div>
-          )}
 
-          {/* Grid Cards */}
-          {gridItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {gridItems.map((item) => {
-                // STORY card
-                if (item.type === 'story') {
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => onNavigate('article', item.articleId)}
-                      className="bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-400 transition-all cursor-pointer flex flex-col justify-between group"
-                    >
-                      <div>
-                        {item.thumbnail && (
-                          <div className="aspect-video rounded overflow-hidden mb-3">
-                            <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
-                          <span className="text-slate-700 font-bold truncate mr-2">{item.category}</span>
-                          {item.timeAgo && <span className="shrink-0">{item.timeAgo}</span>}
-                        </div>
-                        {item.badge && (
-                          <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold border border-emerald-200 mb-2 inline-block">
-                            {item.badge}
-                          </span>
-                        )}
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
-                          {item.title}
-                        </h3>
-                        <p className="text-xs text-slate-600 leading-relaxed mb-4 line-clamp-3">
-                          {item.summary}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-3 border-t border-slate-100">
-                        {item.readTime && <span>{item.readTime}</span>}
-                        {item.author && <span className="text-slate-500 truncate">{item.author}</span>}
-                        <span className="text-slate-700 font-bold group-hover:text-emerald-700 shrink-0 ml-auto">Analyze ↗</span>
-                      </div>
-                    </div>
-                  );
-                }
+            {/* Card 2: Company Dossier (Flutterwave) */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-8 h-8 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center">
+                    FW
+                  </div>
+                  <span className="text-[10px] font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                    Company dossier
+                  </span>
+                </div>
 
-                // DOSSIER card
-                if (item.type === 'dossier') {
-                  const initials = item.title.split(' ').map((w) => w[0]).join('').slice(0, 3).toUpperCase();
-                  return (
-                    <div key={item.id} className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="w-8 h-8 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center">
-                            {initials}
-                          </div>
-                          {item.badge && (
-                            <span className="text-[10px] font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                              {item.badge}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-base font-bold text-slate-950 mb-1">{item.title}</h3>
-                        <p className="text-[11px] font-mono text-slate-500 mb-3">{item.category}</p>
-                        {(item.valuation || item.hq) && (
-                          <div className="p-2.5 rounded bg-slate-50 border border-slate-200 text-xs font-mono space-y-1 mb-3">
-                            {item.valuation && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">Valuation:</span>
-                                <span className="font-bold text-slate-900">{item.valuation}</span>
-                              </div>
-                            )}
-                            {item.hq && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">HQ:</span>
-                                <span className="font-bold text-slate-900">{item.hq}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <p className="text-[11px] font-mono text-slate-600 line-clamp-2">{item.summary}</p>
-                      </div>
-                      <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-                        <span className="text-emerald-700 font-bold flex items-center gap-1">
-                          <Building2 className="w-3 h-3" /> Company dossier
-                        </span>
-                        <span className="text-slate-400">View profile ↗</span>
-                      </div>
-                    </div>
-                  );
-                }
+                <h3 className="text-base font-bold text-slate-950 mb-1">
+                  Flutterwave
+                </h3>
+                <p className="text-[11px] font-mono text-slate-500 mb-3">
+                  African Cross-Border Rails • HQ: Lagos / SF
+                </p>
 
-                // SHORT card
-                if (item.type === 'short') {
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => onNavigate('shorts')}
-                      className="bg-[#090d14] text-white rounded-lg border border-slate-800 p-5 flex flex-col justify-between group cursor-pointer"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 mb-3">
-                          <span className="flex items-center space-x-1">
-                            <Play className="w-3 h-3 fill-current" />
-                            <span>{item.category}</span>
-                          </span>
-                          <span className="text-slate-400">{item.duration}</span>
-                        </div>
-                        {item.badge && (
-                          <div className="text-[10px] font-mono text-emerald-400 font-bold mb-1">{item.badge}</div>
-                        )}
-                        <h3 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors mb-2">
-                          {item.title}
-                        </h3>
-                        <p className="text-[11px] text-slate-400 line-clamp-2">{item.summary}</p>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-3 border-t border-slate-800">
-                        <span>{item.views}</span>
-                        <span className="text-emerald-400 font-bold">Watch clip ↗</span>
-                      </div>
-                    </div>
-                  );
-                }
+                <div className="p-2.5 rounded bg-slate-50 border border-slate-200 text-xs font-mono space-y-1 mb-3">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Valuation:</span>
+                    <span className="font-bold text-slate-900">$3.0B+</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Monitored Rails:</span>
+                    <span className="font-bold text-slate-900">34 Sovereign Currencies</span>
+                  </div>
+                </div>
 
-                // OPERATOR card
-                if (item.type === 'operator') {
-                  const operatorData = OPERATORS_LIST.find((o) => o.name === item.title);
-                  return (
-                    <div key={item.id} className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between">
-                      <div>
-                        {item.badge && (
-                          <span className="text-[10px] font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 mb-3 inline-block">
-                            {item.badge}
-                          </span>
-                        )}
-                        <div className="flex items-center space-x-3 mb-3">
-                          {operatorData?.avatar ? (
-                            <img
-                              src={operatorData.avatar}
-                              alt={item.title}
-                              className="w-12 h-12 rounded-full object-cover border border-slate-200 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
-                              <Users className="w-5 h-5 text-slate-400" />
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="text-sm font-bold text-slate-950">{item.title}</h3>
-                            <p className="text-[11px] font-mono text-slate-500">{item.category}</p>
-                          </div>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{item.summary}</p>
-                      </div>
-                      <div className="pt-3 mt-3 border-t border-slate-100 text-xs font-mono text-slate-400">
-                        {operatorData?.latestDispatch && (
-                          <span className="font-bold text-slate-700">↳ {operatorData.latestDispatch}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
+                <p className="text-[11px] font-mono text-emerald-700">
+                  • 4 new dispatches since last visit
+                </p>
+              </div>
 
-                // INTERVIEW card
-                if (item.type === 'interview') {
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => onNavigate('interview')}
-                      className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between cursor-pointer group"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
-                          <span className="text-slate-700 font-bold">{item.badge || 'The Edit Interviews'}</span>
-                          <span>{item.category}</span>
-                        </div>
-                        <div className="aspect-video bg-slate-900 rounded overflow-hidden mb-3 relative">
-                          <img
-                            src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=600&q=80"
-                            alt={item.title}
-                            className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
-                          />
-                          {item.duration && (
-                            <span className="absolute bottom-2 left-2 text-[10px] font-mono bg-black/80 text-white px-2 py-0.5 rounded">
-                              {item.duration}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
-                          {item.title}
-                        </h3>
-                        <p className="text-xs text-slate-600 line-clamp-2">{item.summary}</p>
-                      </div>
-                      <div className="flex items-center justify-between text-xs font-mono text-slate-500 pt-3 border-t border-slate-100">
-                        <span className="text-slate-500">The Edit Studio</span>
-                        <span className="text-emerald-700 font-bold">{item.category}</span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return null;
-              })}
+              <div className="pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => toggleOrgFollow('Flutterwave')}
+                  className={`w-full py-2 rounded text-xs font-mono font-bold transition-colors ${
+                    followedOrgs['Flutterwave']
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                  }`}
+                >
+                  {followedOrgs['Flutterwave'] ? 'Following org ✓' : 'Follow org +'}
+                </button>
+              </div>
             </div>
-          )}
 
-          {filteredResults.length > 6 && (
-            <div className="text-center pt-4">
-              <button
-                onClick={() => alert(`Loaded ${filteredResults.length} results for "${searchQuery}".`)}
-                className="px-6 py-2.5 rounded bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-mono font-bold tracking-wider inline-flex items-center space-x-2 shadow-sm transition-colors"
-              >
-                <span>Load next 20 results ⇅</span>
-              </button>
+            {/* Card 3: Tech Short (Stablecoin volume flips Visa) */}
+            <div
+              onClick={() => onNavigate('shorts')}
+              className="bg-[#090d14] text-white rounded-lg border border-slate-800 p-5 flex flex-col justify-between group cursor-pointer"
+            >
+              <div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 mb-3">
+                  <span className="flex items-center space-x-1">
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Tech short • 0:54</span>
+                  </span>
+                  <span className="text-slate-400">Next Edit</span>
+                </div>
+
+                <div className="aspect-[16/9] bg-slate-900 rounded overflow-hidden mb-3 relative">
+                  <img
+                    src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=600&q=80"
+                    alt="Stablecoin Short"
+                    className="w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shadow">
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[10px] font-mono text-emerald-400 font-bold mb-1">
+                  Macro telemetry
+                </div>
+                <h3 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors mb-2">
+                  Stablecoin volume flips Visa in emerging markets: the telemetry breakdown
+                </h3>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-3 border-t border-slate-800">
+                <span>94.2K Views</span>
+                <span className="text-emerald-400 font-bold">Watch clip ↗</span>
+              </div>
             </div>
-          )}
+
+            {/* Card 4: Operator Archive (Patrick Collison) */}
+            <div className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                    Operator archive
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-3 mb-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80"
+                    alt="Patrick Collison"
+                    className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                  />
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-950">
+                      Patrick Collison
+                    </h3>
+                    <p className="text-[11px] font-mono text-slate-500">
+                      CEO & Co-Founder • Stripe
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                  Key topics: Sovereign money networks, foundational scientific discovery, machine-executable legal contracts.
+                </p>
+
+                <div className="text-[11px] font-mono bg-slate-50 p-2 rounded text-slate-700">
+                  Latest dispatch: <span className="font-bold">"The Programmable Economy"</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => togglePersonFollow('Patrick Collison')}
+                  className={`w-full py-2 rounded text-xs font-mono font-bold transition-colors ${
+                    followedPeople['Patrick Collison']
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                  }`}
+                >
+                  {followedPeople['Patrick Collison'] ? 'Following operator ✓' : 'Follow operator +'}
+                </button>
+              </div>
+            </div>
+
+            {/* Card 5: Full Interview (The Programmable Economy) */}
+            <div
+              onClick={() => onNavigate('interview')}
+              className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between cursor-pointer group"
+            >
+              <div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
+                  <span className="text-slate-700 font-bold">The Edit Interviews</span>
+                  <span>Episode #41</span>
+                </div>
+
+                <div className="aspect-video bg-slate-900 rounded overflow-hidden mb-3 relative">
+                  <img
+                    src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=600&q=80"
+                    alt="Patrick Collison Interview"
+                    className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
+                  />
+                  <span className="absolute bottom-2 left-2 text-[10px] font-mono bg-black/80 text-white px-2 py-0.5 rounded">
+                    24:15 Full interview
+                  </span>
+                </div>
+
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
+                  The Programmable Economy and Autonomous Agent Billing
+                </h3>
+
+                <p className="text-xs text-slate-600 line-clamp-2">
+                  Deep dive into machine-to-machine liquidity buffers and the future of programmatic tax clearance in sovereign corridors.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-mono text-slate-500 pt-3 border-t border-slate-100">
+                <span>The Edit Studio</span>
+                <span className="text-emerald-700 font-bold">Episode #41</span>
+              </div>
+            </div>
+
+            {/* Card 6: CBDC Story (BIS) */}
+            <div
+              onClick={() => onNavigate('article')}
+              className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between cursor-pointer group"
+            >
+              <div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
+                  <span className="text-slate-700 font-bold">Fintech • Central Banking</span>
+                  <span>1d ago</span>
+                </div>
+
+                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
+                  Central Bank Digital Currency Interoperability Framework Patched by BIS
+                </h3>
+
+                <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                  Project Agora updates its atomic settlement schema to prevent liquidity routing collisions across sovereign wholesale digital rails.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-3 border-t border-slate-100">
+                <span>5 min read</span>
+                <span className="text-slate-700 font-bold group-hover:text-emerald-700">
+                  Analyze ↗
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center pt-4">
+            <button
+              onClick={() => alert('Loaded 20 additional fintech telemetry records.')}
+              className="px-6 py-2.5 rounded bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-mono font-bold tracking-wider inline-flex items-center space-x-2 shadow-sm transition-colors"
+            >
+              <span>Load next 20 results ⇅</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -615,27 +615,43 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             </div>
 
             <div className="space-y-3">
-              {OPERATORS_LIST.slice(0, 4).map((person) => (
-                <div
-                  key={person.id}
-                  className="p-3 bg-white rounded-lg border border-slate-200 flex items-center gap-3"
-                >
-                  <img
-                    src={person.avatar}
-                    alt={person.name}
-                    className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
-                  />
-                  <div className="truncate flex-1">
-                    <div className="font-bold text-xs text-slate-900">{person.name}</div>
-                    <div className="text-[11px] text-slate-500">
-                      {person.role} • {person.company}
+              {OPERATORS_LIST.slice(0, 4).map((person) => {
+                const following = followedPeople[person.name];
+                return (
+                  <div
+                    key={person.id}
+                    className="p-3 bg-white rounded-lg border border-slate-200 flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-3 truncate">
+                      <img
+                        src={person.avatar}
+                        alt={person.name}
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                      />
+                      <div className="truncate">
+                        <div className="font-bold text-xs text-slate-900">{person.name}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {person.role} • {person.company}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400">
+                          {person.latestDispatch}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[10px] font-mono text-slate-400">
-                      {person.latestDispatch}
-                    </div>
+
+                    <button
+                      onClick={() => togglePersonFollow(person.name)}
+                      className={`ml-2 px-3 py-1.5 text-xs font-mono font-bold rounded transition-colors ${
+                        following
+                          ? 'bg-[#00f2aa] text-slate-950'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {following ? 'Following ✓' : 'Follow +'}
+                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -649,27 +665,43 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             </div>
 
             <div className="space-y-3">
-              {COMPANIES_LIST.slice(0, 4).map((org) => (
-                <div
-                  key={org.id}
-                  className="p-3 bg-white rounded-lg border border-slate-200 flex items-center gap-3"
-                >
-                  <div className="w-10 h-10 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">
-                    {org.tag}
-                  </div>
-                  <div className="truncate flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-slate-900">{org.name}</span>
-                      <span className="px-1 rounded text-[9px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-                        {org.badge}
-                      </span>
+              {COMPANIES_LIST.slice(0, 4).map((org) => {
+                const following = followedOrgs[org.name];
+                return (
+                  <div
+                    key={org.id}
+                    className="p-3 bg-white rounded-lg border border-slate-200 flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-3 truncate">
+                      <div className="w-10 h-10 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                        {org.tag}
+                      </div>
+                      <div className="truncate">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-xs text-slate-900">{org.name}</span>
+                          <span className="px-1 py-0.2 rounded text-[9px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                            {org.badge}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 truncate">
+                          {org.summary}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate">
-                      {org.summary}
-                    </div>
+
+                    <button
+                      onClick={() => toggleOrgFollow(org.name)}
+                      className={`ml-2 px-3 py-1.5 text-xs font-mono font-bold rounded transition-colors ${
+                        following
+                          ? 'bg-[#00f2aa] text-slate-950'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {following ? 'Following ✓' : 'Follow +'}
+                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

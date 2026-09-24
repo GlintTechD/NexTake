@@ -1,14 +1,12 @@
 import { supabase } from "./supabase";
 
 export async function getPublishedArticles() {
-  if (!supabase) {
-    return [];
-  }
-
   const { data, error } = await supabase
     .from("articles")
     .select("*")
     .eq("status", "published")
+    .order("is_big_story", { ascending: false })
+    .order("published_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -17,4 +15,16 @@ export async function getPublishedArticles() {
   }
 
   return data ?? [];
+}
+
+export async function getPublishedArticleById(id: string) {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("id", id)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
 }

@@ -10,8 +10,8 @@ const readEnv = (key: string, fallback?: string) => {
 
 export const config = {
   APP_URL: readEnv('APP_URL', 'http://localhost:4100'),
-  ADMIN_USERNAME: readEnv('ADMIN_USERNAME', 'Glint'),
-  ADMIN_EMAIL: readEnv('ADMIN_EMAIL', 'martins14747@gmail.com'),
+  ADMIN_USERNAME: readEnv('ADMIN_USERNAME', 'NexTakeAfrica'),
+  ADMIN_EMAIL: readEnv('ADMIN_EMAIL', 'nextakeafrica@gmail.com'),
   DATABASE_URL: readEnv('DATABASE_URL'),
   RESEND_API_KEY: readEnv('RESEND_API_KEY'),
   RESEND_FROM_EMAIL: readEnv('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),

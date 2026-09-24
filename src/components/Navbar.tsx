@@ -56,7 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 currentScreen === 'shorts' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
-              
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
               <span>Shorts</span>
             </button>
             <button
