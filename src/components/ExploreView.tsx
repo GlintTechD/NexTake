@@ -40,7 +40,7 @@ const TEAM_MEMBERS = [
   },
   {
     id: 'tm-funmi',
-    name: 'Funmi',
+    name: 'Odusanya Oluwafunmilayo',
     role: 'Creator',
     company: 'Portfolio',
     avatar: imgFunmi,
