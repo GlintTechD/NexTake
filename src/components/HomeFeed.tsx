@@ -13,13 +13,13 @@ import {
 } from '../data/mockData';
 
 // ── Team member asset imports ──────────────────────────────────────────────
-import imgAkanni   from '../assets/Akanni_Promise.png';
-import imgFunmi    from '../assets/Funmi.jpeg';
-import imgNifemi   from '../assets/Nifemi_Martins.jpeg';
+import imgAkanni from '../assets/Akanni_Promise.png';
+import imgFunmi from '../assets/Funmi.jpeg';
+import imgNifemi from '../assets/Nifemi_Martins.jpeg';
 import imgOlalekan from '../assets/Olalekan_Ajiboye.webp';
-import imgPromise  from '../assets/Promise_Anyim.jpeg';
-import imgSeidu    from '../assets/Seidu_Gbotemi.jpeg';
-import imgMartins  from '../assets/Martins_Enofe.jpeg';
+import imgPromise from '../assets/Promise_Anyim.jpeg';
+import imgSeidu from '../assets/Seidu_Gbotemi.jpeg';
+import imgMartins from '../assets/Martins_Enofe.jpeg';
 
 const TEAM_MEMBERS = [
   {
@@ -32,7 +32,7 @@ const TEAM_MEMBERS = [
   },
   {
     id: 'tm-funmi',
-    name: 'Funmi',
+    name: 'Odusanya Oluwafunmilayo',
     role: 'Creator',
     company: 'Portfolio',
     avatar: imgFunmi,
@@ -123,15 +123,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
 
   const [latestArticles, setLatestArticles] = useState<LatestArticle[]>([]);
-const [latestLoading, setLatestLoading] = useState(true);
+  const [latestLoading, setLatestLoading] = useState(true);
   const [publishedBigStories, setPublishedBigStories] = useState<SupabaseArticle[]>([]);
 
-const [activeCategoryTab, setActiveCategoryTab] = useState("All");
+  const [activeCategoryTab, setActiveCategoryTab] = useState("All");
 
-const [selectedTopic, setSelectedTopic] = useState("All Topics");
-const [selectedType, setSelectedType] = useState("All Types");
+  const [selectedTopic, setSelectedTopic] = useState("All Topics");
+  const [selectedType, setSelectedType] = useState("All Types");
 
-const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   const [followedOperators, setFollowedOperators] = useState<Record<string, boolean>>({
@@ -177,37 +177,37 @@ const [searchQuery, setSearchQuery] = useState("");
       setEmailInput('');
     }
   };
-useEffect(() => {
-  const loadLatestArticles = async () => {
-    setLatestLoading(true);
+  useEffect(() => {
+    const loadLatestArticles = async () => {
+      setLatestLoading(true);
 
-    const articles = await getLatestArticles();
+      const articles = await getLatestArticles();
 
-    console.log("Published articles:", articles);
+      console.log("Published articles:", articles);
 
-    setLatestArticles(articles);
-    setLatestLoading(false);
-  };
+      setLatestArticles(articles);
+      setLatestLoading(false);
+    };
 
-  loadLatestArticles();
-}, []);
+    loadLatestArticles();
+  }, []);
 
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  const loadBigStories = async () => {
-    const stories = await getPublishedBigStories();
-    if (isMounted) setPublishedBigStories(stories);
-  };
+    const loadBigStories = async () => {
+      const stories = await getPublishedBigStories();
+      if (isMounted) setPublishedBigStories(stories);
+    };
 
-  void loadBigStories();
-  const refreshTimer = window.setInterval(loadBigStories, 24 * 60 * 60 * 1000);
+    void loadBigStories();
+    const refreshTimer = window.setInterval(loadBigStories, 24 * 60 * 60 * 1000);
 
-  return () => {
-    isMounted = false;
-    window.clearInterval(refreshTimer);
-  };
-}, []);
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshTimer);
+    };
+  }, []);
 
   const activeBigStory = (() => {
     if (publishedBigStories.length === 0) return BIG_STORY;
@@ -228,52 +228,52 @@ useEffect(() => {
       ],
     };
   })();
-const filteredArticles = latestArticles.filter((article) => {
-  const matchesCategory =
-    activeCategoryTab === "All" ||
-    article.category.toLowerCase() ===
+  const filteredArticles = latestArticles.filter((article) => {
+    const matchesCategory =
+      activeCategoryTab === "All" ||
+      article.category.toLowerCase() ===
       activeCategoryTab.toLowerCase();
 
-  const matchesTopic =
-    selectedTopic === "All Topics" ||
-    article.topic.toLowerCase() ===
+    const matchesTopic =
+      selectedTopic === "All Topics" ||
+      article.topic.toLowerCase() ===
       selectedTopic.toLowerCase();
 
-  const matchesType =
-    selectedType === "All Types" ||
-    article.type.toLowerCase() ===
+    const matchesType =
+      selectedType === "All Types" ||
+      article.type.toLowerCase() ===
       selectedType.toLowerCase();
 
-  const query = searchQuery.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
 
-  const matchesSearch =
-    !query ||
-    article.title.toLowerCase().includes(query) ||
-    article.description.toLowerCase().includes(query) ||
-    article.category.toLowerCase().includes(query) ||
-    article.topic.toLowerCase().includes(query);
+    const matchesSearch =
+      !query ||
+      article.title.toLowerCase().includes(query) ||
+      article.description.toLowerCase().includes(query) ||
+      article.category.toLowerCase().includes(query) ||
+      article.topic.toLowerCase().includes(query);
 
-  return (
-    matchesCategory &&
-    matchesTopic &&
-    matchesType &&
-    matchesSearch
-  );
-});
-useEffect(() => {
-  const loadDailyEdit = async () => {
-    setDailyEditLoading(true);
+    return (
+      matchesCategory &&
+      matchesTopic &&
+      matchesType &&
+      matchesSearch
+    );
+  });
+  useEffect(() => {
+    const loadDailyEdit = async () => {
+      setDailyEditLoading(true);
 
-    const items = await getDailyEditItems();
+      const items = await getDailyEditItems();
 
-    console.log("Daily Editorial from Supabase:", items);
+      console.log("Daily Editorial from Supabase:", items);
 
-    setDailyEditItems(items);
-    setDailyEditLoading(false);
-  };
+      setDailyEditItems(items);
+      setDailyEditLoading(false);
+    };
 
-  loadDailyEdit();
-}, []);
+    loadDailyEdit();
+  }, []);
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
@@ -326,52 +326,52 @@ useEffect(() => {
 
         {/* 5 Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-         {dailyEditLoading ? (
-  <div className="col-span-full py-10 text-center">
-    <p className="text-xs font-mono text-slate-400">
-      Loading today's editorial...
-    </p>
-  </div>
-) : dailyEditItems.length === 0 ? (
-  <div className="col-span-full py-10 text-center">
-    <p className="text-xs font-mono text-slate-400">
-      No published editorial stories available.
-    </p>
-  </div>
-) : (
-  dailyEditItems.map((item) => (
-    <div
-      key={item.id}
-     
-      className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
-    >
-      <div>
-        <div className="flex items-center justify-between text-xs font-mono mb-2">
-          <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
-            {item.num}
-          </span>
+          {dailyEditLoading ? (
+            <div className="col-span-full py-10 text-center">
+              <p className="text-xs font-mono text-slate-400">
+                Loading today's editorial...
+              </p>
+            </div>
+          ) : dailyEditItems.length === 0 ? (
+            <div className="col-span-full py-10 text-center">
+              <p className="text-xs font-mono text-slate-400">
+                No published editorial stories available.
+              </p>
+            </div>
+          ) : (
+            dailyEditItems.map((item) => (
+              <div
+                key={item.id}
 
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-            {item.tag}
-          </span>
-        </div>
+                className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-xs font-mono mb-2">
+                    <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
+                      {item.num}
+                    </span>
 
-        <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
-          {item.title}
-        </h3>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                      {item.tag}
+                    </span>
+                  </div>
 
-        <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
-          {item.description}
-        </p>
-      </div>
+                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
+                    {item.title}
+                  </h3>
 
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
-        <span>{item.timeAgo}</span>
-        <span>{item.readTime}</span>
-      </div>
-    </div>
-  ))
-)}
+                  <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
+                  <span>{item.timeAgo}</span>
+                  <span>{item.readTime}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -608,11 +608,10 @@ useEffect(() => {
                 <button
                   key={cat}
                   onClick={() => setActiveCategoryTab(cat)}
-                  className={`px-3 py-1.5 text-xs font-mono font-semibold rounded transition-colors ${
-                    activeCategoryTab === cat
-                      ? 'bg-slate-950 text-white'
-                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                  }`}
+                  className={`px-3 py-1.5 text-xs font-mono font-semibold rounded transition-colors ${activeCategoryTab === cat
+                    ? 'bg-slate-950 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
                 >
                   {cat}
                 </button>
@@ -621,104 +620,103 @@ useEffect(() => {
           </div>
 
           <div className="flex items-center space-x-2 text-xs font-mono">
-           <select
-  value={selectedTopic}
-  onChange={(e) => setSelectedTopic(e.target.value)}
-  className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
->
-  <option>All Topics</option>
-  <option>Deep Learning</option>
-  <option>Venture Capital</option>
-  <option>Silicon Fabs</option>
-</select>
-           <select
-  value={selectedType}
-  onChange={(e) => setSelectedType(e.target.value)}
-  className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
->
-  <option>All Types</option>
-  <option>Dispatches</option>
-  <option>Monographs</option>
-  <option>Interviews</option>
-</select>
+            <select
+              value={selectedTopic}
+              onChange={(e) => setSelectedTopic(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
+            >
+              <option>All Topics</option>
+              <option>Deep Learning</option>
+              <option>Venture Capital</option>
+              <option>Silicon Fabs</option>
+            </select>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
+            >
+              <option>All Types</option>
+              <option>Dispatches</option>
+              <option>Monographs</option>
+              <option>Interviews</option>
+            </select>
           </div>
         </div>
 
         {/* Latest Dispatches List */}
         <div className="space-y-4">
-  {latestLoading ? (
-    <div className="py-10 text-center">
-      <p className="text-sm font-mono text-slate-400">
-        Loading stories...
-      </p>
-    </div>
-  ) : filteredArticles.length === 0 ? (
-    <div className="py-10 text-center border border-dashed border-slate-200 rounded-lg">
-      <p className="text-sm font-mono text-slate-400">
-        No stories match your filters.
-      </p>
-    </div>
-  ) : (
-    filteredArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => onNavigate("article", article.id)}
-        className="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
-      >
-        <div className="space-y-1.5 max-w-3xl">
-          <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-              {article.category}
-            </span>
+          {latestLoading ? (
+            <div className="py-10 text-center">
+              <p className="text-sm font-mono text-slate-400">
+                Loading stories...
+              </p>
+            </div>
+          ) : filteredArticles.length === 0 ? (
+            <div className="py-10 text-center border border-dashed border-slate-200 rounded-lg">
+              <p className="text-sm font-mono text-slate-400">
+                No stories match your filters.
+              </p>
+            </div>
+          ) : (
+            filteredArticles.map((article) => (
+              <div
+                key={article.id}
+                onClick={() => onNavigate("article", article.id)}
+                className="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
+              >
+                <div className="space-y-1.5 max-w-3xl">
+                  <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
+                    <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      {article.category}
+                    </span>
 
-            <span>•</span>
+                    <span>•</span>
 
-            <span>{article.timeAgo}</span>
+                    <span>{article.timeAgo}</span>
 
-            <span>•</span>
+                    <span>•</span>
 
-            <span>{article.readTime}</span>
-          </div>
+                    <span>{article.readTime}</span>
+                  </div>
 
-          <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-            {article.title}
-          </h3>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                    {article.title}
+                  </h3>
 
-          <p className="text-xs text-slate-500 leading-relaxed">
-            {article.description}
-          </p>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {article.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleSave(article.id);
+                    }}
+                    className={`p-2 rounded border transition-colors ${isSaved(article.id)
+                      ? "bg-emerald-50 text-emerald-600 border-emerald-300"
+                      : "text-slate-400 hover:text-slate-700 border-slate-200"
+                      }`}
+                    title="Save Story"
+                  >
+                    <Bookmark className="w-4 h-4 fill-current" />
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate("article", article.id);
+                    }}
+                    className="px-3 py-1.5 rounded bg-slate-50 text-slate-700 group-hover:bg-slate-950 group-hover:text-white transition-colors text-xs font-mono font-bold flex items-center space-x-1"
+                  >
+                    <span>Read →</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-
-        <div className="flex items-center space-x-2 shrink-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSave(article.id);
-            }}
-            className={`p-2 rounded border transition-colors ${
-              isSaved(article.id)
-                ? "bg-emerald-50 text-emerald-600 border-emerald-300"
-                : "text-slate-400 hover:text-slate-700 border-slate-200"
-            }`}
-            title="Save Story"
-          >
-            <Bookmark className="w-4 h-4 fill-current" />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate("article", article.id);
-            }}
-            className="px-3 py-1.5 rounded bg-slate-50 text-slate-700 group-hover:bg-slate-950 group-hover:text-white transition-colors text-xs font-mono font-bold flex items-center space-x-1"
-          >
-            <span>Read →</span>
-          </button>
-        </div>
-      </div>
-    ))
-  )}
-</div>
 
         <div className="text-center mt-8">
           <button
@@ -727,7 +725,7 @@ useEffect(() => {
           >
             <span>Load more stories ⤓</span>
           </button>
-          
+
         </div>
       </section>
 
