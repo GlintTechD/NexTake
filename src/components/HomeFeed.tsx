@@ -13,6 +13,74 @@ import {
   COMPANIES_LIST,
 } from '../data/mockData';
 
+// ── Team member asset imports ──────────────────────────────────────────────
+import imgAkanni   from '../assets/Akanni_Promise.png';
+import imgFunmi    from '../assets/Funmi.jpeg';
+import imgNifemi   from '../assets/Nifemi_Martins.jpeg';
+import imgOlalekan from '../assets/Olalekan_Ajiboye.webp';
+import imgPromise  from '../assets/Promise_Anyim.jpeg';
+import imgSeidu    from '../assets/Seidu_Gbotemi.jpeg';
+import imgMartins  from '../assets/Martins_Enofe.jpeg';
+
+const TEAM_MEMBERS = [
+  {
+    id: 'tm-akanni',
+    name: 'Akanni Promise',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgAkanni,
+    portfolioUrl: 'https://akon-007.github.io/',
+  },
+  {
+    id: 'tm-funmi',
+    name: 'Funmi',
+    role: 'Creator',
+    company: 'Portfolio',
+    avatar: imgFunmi,
+    portfolioUrl: 'https://creatorfunmi.vercel.app/',
+  },
+  {
+    id: 'tm-nifemi',
+    name: 'Nifemi Martins',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgNifemi,
+    portfolioUrl: 'https://ace-xa3.github.io/portfolio-ace/',
+  },
+  {
+    id: 'tm-olalekan',
+    name: 'Olalekan Ajiboye',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgOlalekan,
+    portfolioUrl: 'https://olalekan-ajiboye-portfolio.vercel.app',
+  },
+  {
+    id: 'tm-promise',
+    name: 'Promise Anyim',
+    role: 'Professional',
+    company: 'LinkedIn',
+    avatar: imgPromise,
+    portfolioUrl: 'https://www.linkedin.com/in/promise-job-anyim-25779a26b?utm_source=share_via&utm_content=profile&utm_medium=member_ios',
+  },
+  {
+    id: 'tm-seidu',
+    name: 'Seidu Gbotemi',
+    role: 'Professional',
+    company: 'LinkedIn',
+    avatar: imgSeidu,
+    portfolioUrl: 'https://www.linkedin.com/in/seidu-oluwagbotemi-06096b35b',
+  },
+  {
+    id: 'tm-martins',
+    name: 'Martins Enofe',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgMartins,
+    portfolioUrl: 'https://edonicholas-martins-portfolio.vercel.app',
+  },
+];
+
 import {
   getLatestArticles,
   getPublishedBigStories,
@@ -909,62 +977,51 @@ useEffect(() => {
         {/* Operators */}
         <div className="mb-6">
           <h3 className="text-xs font-mono text-slate-400 tracking-wider font-semibold mb-3">
-            Operators & Researchers
+            Operators &amp; Researchers
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {OPERATORS_LIST.slice(0, 4).map((op) => {
-              const following = followedOperators[op.id];
-              return (
-                <div
-                  key={op.id}
-                  className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <img
-                      src={op.avatar}
-                      alt={op.name}
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
-                    />
-                    <div className="truncate">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">
-                        {op.name}
-                      </h4>
-                      <p className="text-[10px] text-slate-500 truncate">
-                        {op.company}
-                      </p>
-                    </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {TEAM_MEMBERS.map((op) => (
+              <a
+                key={op.id}
+                href={op.portfolioUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center gap-2.5 hover:border-emerald-300 hover:shadow-sm transition-all group no-underline"
+              >
+                <div className="flex items-center space-x-2.5 truncate flex-1">
+                  <img
+                    src={op.avatar}
+                    alt={op.name}
+                    className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+                  />
+                  <div className="truncate">
+                    <h4 className="text-xs font-bold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
+                      {op.name}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      {op.company}
+                    </p>
                   </div>
-
-                  <button
-                    onClick={() => toggleOperatorFollow(op.id)}
-                    className={`ml-2 px-2.5 py-1 text-[10px] font-mono font-bold rounded transition-colors ${
-                      following
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {following ? 'Following ✓' : 'Follow +'}
-                  </button>
                 </div>
-              );
-            })}
+                <span className="text-[10px] font-mono text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">↗</span>
+              </a>
+            ))}
           </div>
         </div>
 
         {/* Enterprises */}
         <div>
           <h3 className="text-xs font-mono text-slate-400 tracking-wider font-semibold mb-3">
-            Enterprises & Startups
+            Enterprises &amp; Startups
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {COMPANIES_LIST.slice(0, 4).map((co) => {
-              const following = followedCompanies[co.id];
               return (
                 <div
                   key={co.id}
-                  className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center justify-between"
+                  className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5 truncate">
+                  <div className="flex items-center space-x-2.5 truncate flex-1">
                     <div className="w-9 h-9 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">
                       {co.tag}
                     </div>
@@ -977,17 +1034,6 @@ useEffect(() => {
                       </p>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => toggleCompanyFollow(co.id)}
-                    className={`ml-2 px-2.5 py-1 text-[10px] font-mono font-bold rounded transition-colors ${
-                      following
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {following ? 'Following ✓' : 'Follow +'}
-                  </button>
                 </div>
               );
             })}

@@ -141,6 +141,7 @@ export interface Operator {
   dispatchCount: number;
   isFollowing?: boolean;
   latestDispatch?: string;
+  portfolioUrl?: string;
 }
 
 export interface CompanyOrg {

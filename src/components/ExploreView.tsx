@@ -6,6 +6,15 @@ import {
   OPERATORS_LIST,
   COMPANIES_LIST,
 } from '../data/mockData';
+
+// ── Team member asset imports ──────────────────────────────────────────────
+import imgAkanni from '../assets/Akanni_Promise.png';
+import imgFunmi from '../assets/Funmi.jpeg';
+import imgNifemi from '../assets/Nifemi_Martins.jpeg';
+import imgOlalekan from '../assets/Olalekan_Ajiboye.webp';
+import imgPromise from '../assets/Promise_Anyim.jpeg';
+import imgSeidu from '../assets/Seidu_Gbotemi.jpeg';
+import imgMartins from '../assets/Martins_Enofe.jpeg';
 import {
   Search,
   X,
@@ -19,6 +28,73 @@ import {
   Users,
   Building2,
 } from 'lucide-react';
+
+const TEAM_MEMBERS = [
+  {
+    id: 'tm-akanni',
+    name: 'Akanni Promise',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgAkanni,
+    latestDispatch: 'Full-Stack Developer & Creative Technologist',
+    portfolioUrl: 'https://akon-007.github.io/',
+  },
+  {
+    id: 'tm-funmi',
+    name: 'Funmi',
+    role: 'Creator',
+    company: 'Portfolio',
+    avatar: imgFunmi,
+    latestDispatch: 'Creative Designer & Brand Strategist',
+    portfolioUrl: 'https://creatorfunmi.vercel.app/',
+  },
+  {
+    id: 'tm-nifemi',
+    name: 'Nifemi Martins',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgNifemi,
+    latestDispatch: 'Software Engineer & Tech Innovator',
+    portfolioUrl: 'https://ace-xa3.github.io/portfolio-ace/',
+  },
+  {
+    id: 'tm-olalekan',
+    name: 'Olalekan Ajiboye',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgOlalekan,
+    latestDispatch: 'Frontend Engineer & UI/UX Specialist',
+    portfolioUrl: 'https://olalekan-ajiboye-portfolio.vercel.app',
+  },
+  {
+    id: 'tm-promise',
+    name: 'Promise Anyim',
+    role: 'Professional',
+    company: 'LinkedIn',
+    avatar: imgPromise,
+    latestDispatch: 'Tech Professional & Business Strategist',
+    portfolioUrl: 'https://www.linkedin.com/in/promise-job-anyim-25779a26b?utm_source=share_via&utm_content=profile&utm_medium=member_ios',
+  },
+  {
+    id: 'tm-seidu',
+    name: 'Seidu Gbotemi',
+    role: 'Professional',
+    company: 'LinkedIn',
+    avatar: imgSeidu,
+    latestDispatch: 'Technology Professional & Innovator',
+    portfolioUrl: 'https://www.linkedin.com/in/seidu-oluwagbotemi-06096b35b',
+  },
+  {
+    id: 'tm-martins',
+    name: 'Martins Enofe',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgMartins,
+    latestDispatch: 'Software Developer & Creative Builder',
+    portfolioUrl: 'https://edonicholas-martins-portfolio.vercel.app',
+  },
+];
+
 
 interface ExploreViewProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
@@ -150,11 +226,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               <button
                 key={query}
                 onClick={() => handleQueryClick(query)}
-                className={`px-2.5 py-1 rounded transition-colors ${
-                  searchQuery.toUpperCase() === query.toUpperCase()
-                    ? 'bg-[#00f2aa] text-slate-950 font-bold'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
+                className={`px-2.5 py-1 rounded transition-colors ${searchQuery.toUpperCase() === query.toUpperCase()
+                  ? 'bg-[#00f2aa] text-slate-950 font-bold'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
               >
                 {query}
               </button>
@@ -195,11 +270,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveFilterTab(tab.id)}
-                className={`px-3 py-1.5 rounded font-semibold transition-colors ${
-                  activeFilterTab === tab.id
-                    ? 'bg-slate-950 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
+                className={`px-3 py-1.5 rounded font-semibold transition-colors ${activeFilterTab === tab.id
+                  ? 'bg-slate-950 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+                  }`}
               >
                 {tab.label} <span className="text-[10px] opacity-75">{tab.count}</span>
               </button>
@@ -286,11 +360,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                       </button>
                       <button
                         onClick={() => onToggleSave(topResult.id)}
-                        className={`p-2 rounded border transition-colors ${
-                          savedIds.includes(topResult.id)
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
-                            : 'border-slate-300 text-slate-500 hover:text-slate-900'
-                        }`}
+                        className={`p-2 rounded border transition-colors ${savedIds.includes(topResult.id)
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
+                          : 'border-slate-300 text-slate-500 hover:text-slate-900'
+                          }`}
                       >
                         <Bookmark className="w-4 h-4 fill-current" />
                       </button>
@@ -566,11 +639,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               <div
                 key={topic.id}
                 onClick={() => setSearchQuery(topic.name)}
-                className={`p-5 rounded-lg border transition-all cursor-pointer group flex flex-col justify-between ${
-                  isSelected
-                    ? 'bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                }`}
+                className={`p-5 rounded-lg border transition-all cursor-pointer group flex flex-col justify-between ${isSelected
+                  ? 'bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500'
+                  : 'bg-white border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 <div className="flex items-center justify-between mb-3">
                   {isSelected && (
@@ -611,14 +683,17 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               <span className="text-xs font-mono font-bold tracking-wider text-slate-900">
                 Knowledge base • People / Trending in this domain
               </span>
-              <span className="text-xs font-mono text-slate-400">04 matched</span>
+              <span className="text-xs font-mono text-slate-400">07 matched</span>
             </div>
 
             <div className="space-y-3">
-              {OPERATORS_LIST.slice(0, 4).map((person) => (
-                <div
+              {TEAM_MEMBERS.map((person) => (
+                <a
                   key={person.id}
-                  className="p-3 bg-white rounded-lg border border-slate-200 flex items-center gap-3"
+                  href={person.portfolioUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 bg-white rounded-lg border border-slate-200 flex items-center gap-3 hover:border-emerald-300 hover:shadow-sm transition-all group cursor-pointer no-underline"
                 >
                   <img
                     src={person.avatar}
@@ -626,7 +701,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                     className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
                   />
                   <div className="truncate flex-1">
-                    <div className="font-bold text-xs text-slate-900">{person.name}</div>
+                    <div className="font-bold text-xs text-slate-900 group-hover:text-emerald-700 transition-colors">{person.name}</div>
                     <div className="text-[11px] text-slate-500">
                       {person.role} • {person.company}
                     </div>
@@ -634,7 +709,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                       {person.latestDispatch}
                     </div>
                   </div>
-                </div>
+                  <span className="text-[10px] font-mono text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">↗</span>
+                </a>
               ))}
             </div>
           </div>
