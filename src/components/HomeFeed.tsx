@@ -10,8 +10,75 @@ import {
   LATEST_DISPATCHES,
   DOMAIN_TOPICS,
   OPERATORS_LIST,
-  COMPANIES_LIST,
 } from '../data/mockData';
+
+// ── Team member asset imports ──────────────────────────────────────────────
+import imgAkanni from '../Pic/Akanni_Promise.png';
+import imgFunmi from '../Pic/Funmi.jpeg';
+// import imgNifemi from '../Pic/Nifemi_Martins.jpeg';
+import imgOlalekan from '../Pic/Olalekan_Ajiboye.webp';
+import imgPromise from '../Pic/Promise_Anyim.jpeg';
+import imgSeidu from '../Pic/Seidu_Gbotemi.jpeg';
+import imgMartins from '../Pic/Martins_Enofe.jpeg';
+
+const TEAM_MEMBERS = [
+  {
+    id: 'tm-akanni',
+    name: 'Akanni Promise',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgAkanni,
+    portfolioUrl: 'https://akon-007.github.io/',
+  },
+  {
+    id: 'tm-funmi',
+    name: 'Odusanya Oluwafunmilayo',
+    role: 'Creator',
+    company: 'Portfolio',
+    avatar: imgFunmi,
+    portfolioUrl: 'https://creatorfunmi.vercel.app/',
+  },
+  // {
+  //   id: 'tm-nifemi',
+  //   name: 'Nifemi Martins',
+  //   role: 'Developer',
+  //   company: 'Portfolio',
+  //   avatar: imgNifemi,
+  //   portfolioUrl: 'https://ace-xa3.github.io/portfolio-ace/',
+  // },
+  {
+    id: 'tm-olalekan',
+    name: 'Olalekan Ajiboye',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgOlalekan,
+    portfolioUrl: 'https://olalekan-ajiboye-portfolio.vercel.app',
+  },
+  {
+    id: 'tm-promise',
+    name: 'Promise Anyim',
+    role: 'Professional',
+    company: 'LinkedIn',
+    avatar: imgPromise,
+    portfolioUrl: 'https://www.linkedin.com/in/promise-job-anyim-25779a26b?utm_source=share_via&utm_content=profile&utm_medium=member_ios',
+  },
+  {
+    id: 'tm-seidu',
+    name: 'Seidu Gbotemi',
+    role: 'Professional',
+    company: 'LinkedIn',
+    avatar: imgSeidu,
+    portfolioUrl: 'https://www.linkedin.com/in/seidu-oluwagbotemi-06096b35b',
+  },
+  {
+    id: 'tm-martins',
+    name: 'Martins Enofe',
+    role: 'Developer',
+    company: 'Portfolio',
+    avatar: imgMartins,
+    portfolioUrl: 'https://edonicholas-martins-portfolio.vercel.app',
+  },
+];
 
 import {
   getLatestArticles,
@@ -56,15 +123,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
 
   const [latestArticles, setLatestArticles] = useState<LatestArticle[]>([]);
-const [latestLoading, setLatestLoading] = useState(true);
+  const [latestLoading, setLatestLoading] = useState(true);
   const [publishedBigStories, setPublishedBigStories] = useState<SupabaseArticle[]>([]);
 
-const [activeCategoryTab, setActiveCategoryTab] = useState("All");
+  const [activeCategoryTab, setActiveCategoryTab] = useState("All");
 
-const [selectedTopic, setSelectedTopic] = useState("All Topics");
-const [selectedType, setSelectedType] = useState("All Types");
+  const [selectedTopic, setSelectedTopic] = useState("All Topics");
+  const [selectedType, setSelectedType] = useState("All Types");
 
-const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   const [followedOperators, setFollowedOperators] = useState<Record<string, boolean>>({
@@ -110,37 +177,37 @@ const [searchQuery, setSearchQuery] = useState("");
       setEmailInput('');
     }
   };
-useEffect(() => {
-  const loadLatestArticles = async () => {
-    setLatestLoading(true);
+  useEffect(() => {
+    const loadLatestArticles = async () => {
+      setLatestLoading(true);
 
-    const articles = await getLatestArticles();
+      const articles = await getLatestArticles();
 
-    console.log("Published articles:", articles);
+      console.log("Published articles:", articles);
 
-    setLatestArticles(articles);
-    setLatestLoading(false);
-  };
+      setLatestArticles(articles);
+      setLatestLoading(false);
+    };
 
-  loadLatestArticles();
-}, []);
+    loadLatestArticles();
+  }, []);
 
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  const loadBigStories = async () => {
-    const stories = await getPublishedBigStories();
-    if (isMounted) setPublishedBigStories(stories);
-  };
+    const loadBigStories = async () => {
+      const stories = await getPublishedBigStories();
+      if (isMounted) setPublishedBigStories(stories);
+    };
 
-  void loadBigStories();
-  const refreshTimer = window.setInterval(loadBigStories, 24 * 60 * 60 * 1000);
+    void loadBigStories();
+    const refreshTimer = window.setInterval(loadBigStories, 24 * 60 * 60 * 1000);
 
-  return () => {
-    isMounted = false;
-    window.clearInterval(refreshTimer);
-  };
-}, []);
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshTimer);
+    };
+  }, []);
 
   const activeBigStory = (() => {
     if (publishedBigStories.length === 0) return BIG_STORY;
@@ -161,52 +228,52 @@ useEffect(() => {
       ],
     };
   })();
-const filteredArticles = latestArticles.filter((article) => {
-  const matchesCategory =
-    activeCategoryTab === "All" ||
-    article.category.toLowerCase() ===
+  const filteredArticles = latestArticles.filter((article) => {
+    const matchesCategory =
+      activeCategoryTab === "All" ||
+      article.category.toLowerCase() ===
       activeCategoryTab.toLowerCase();
 
-  const matchesTopic =
-    selectedTopic === "All Topics" ||
-    article.topic.toLowerCase() ===
+    const matchesTopic =
+      selectedTopic === "All Topics" ||
+      article.topic.toLowerCase() ===
       selectedTopic.toLowerCase();
 
-  const matchesType =
-    selectedType === "All Types" ||
-    article.type.toLowerCase() ===
+    const matchesType =
+      selectedType === "All Types" ||
+      article.type.toLowerCase() ===
       selectedType.toLowerCase();
 
-  const query = searchQuery.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
 
-  const matchesSearch =
-    !query ||
-    article.title.toLowerCase().includes(query) ||
-    article.description.toLowerCase().includes(query) ||
-    article.category.toLowerCase().includes(query) ||
-    article.topic.toLowerCase().includes(query);
+    const matchesSearch =
+      !query ||
+      article.title.toLowerCase().includes(query) ||
+      article.description.toLowerCase().includes(query) ||
+      article.category.toLowerCase().includes(query) ||
+      article.topic.toLowerCase().includes(query);
 
-  return (
-    matchesCategory &&
-    matchesTopic &&
-    matchesType &&
-    matchesSearch
-  );
-});
-useEffect(() => {
-  const loadDailyEdit = async () => {
-    setDailyEditLoading(true);
+    return (
+      matchesCategory &&
+      matchesTopic &&
+      matchesType &&
+      matchesSearch
+    );
+  });
+  useEffect(() => {
+    const loadDailyEdit = async () => {
+      setDailyEditLoading(true);
 
-    const items = await getDailyEditItems();
+      const items = await getDailyEditItems();
 
-    console.log("Daily Editorial from Supabase:", items);
+      console.log("Daily Editorial from Supabase:", items);
 
-    setDailyEditItems(items);
-    setDailyEditLoading(false);
-  };
+      setDailyEditItems(items);
+      setDailyEditLoading(false);
+    };
 
-  loadDailyEdit();
-}, []);
+    loadDailyEdit();
+  }, []);
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
@@ -259,52 +326,52 @@ useEffect(() => {
 
         {/* 5 Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-         {dailyEditLoading ? (
-  <div className="col-span-full py-10 text-center">
-    <p className="text-xs font-mono text-slate-400">
-      Loading today's editorial...
-    </p>
-  </div>
-) : dailyEditItems.length === 0 ? (
-  <div className="col-span-full py-10 text-center">
-    <p className="text-xs font-mono text-slate-400">
-      No published editorial stories available.
-    </p>
-  </div>
-) : (
-  dailyEditItems.map((item) => (
-    <div
-      key={item.id}
-     
-      className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
-    >
-      <div>
-        <div className="flex items-center justify-between text-xs font-mono mb-2">
-          <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
-            {item.num}
-          </span>
+          {dailyEditLoading ? (
+            <div className="col-span-full py-10 text-center">
+              <p className="text-xs font-mono text-slate-400">
+                Loading today's editorial...
+              </p>
+            </div>
+          ) : dailyEditItems.length === 0 ? (
+            <div className="col-span-full py-10 text-center">
+              <p className="text-xs font-mono text-slate-400">
+                No published editorial stories available.
+              </p>
+            </div>
+          ) : (
+            dailyEditItems.map((item) => (
+              <div
+                key={item.id}
 
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-            {item.tag}
-          </span>
-        </div>
+                className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-xs font-mono mb-2">
+                    <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
+                      {item.num}
+                    </span>
 
-        <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
-          {item.title}
-        </h3>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                      {item.tag}
+                    </span>
+                  </div>
 
-        <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
-          {item.description}
-        </p>
-      </div>
+                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
+                    {item.title}
+                  </h3>
 
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
-        <span>{item.timeAgo}</span>
-        <span>{item.readTime}</span>
-      </div>
-    </div>
-  ))
-)}
+                  <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
+                  <span>{item.timeAgo}</span>
+                  <span>{item.readTime}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -541,11 +608,10 @@ useEffect(() => {
                 <button
                   key={cat}
                   onClick={() => setActiveCategoryTab(cat)}
-                  className={`px-3 py-1.5 text-xs font-mono font-semibold rounded transition-colors ${
-                    activeCategoryTab === cat
-                      ? 'bg-slate-950 text-white'
-                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                  }`}
+                  className={`px-3 py-1.5 text-xs font-mono font-semibold rounded transition-colors ${activeCategoryTab === cat
+                    ? 'bg-slate-950 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
                 >
                   {cat}
                 </button>
@@ -554,104 +620,103 @@ useEffect(() => {
           </div>
 
           <div className="flex items-center space-x-2 text-xs font-mono">
-           <select
-  value={selectedTopic}
-  onChange={(e) => setSelectedTopic(e.target.value)}
-  className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
->
-  <option>All Topics</option>
-  <option>Deep Learning</option>
-  <option>Venture Capital</option>
-  <option>Silicon Fabs</option>
-</select>
-           <select
-  value={selectedType}
-  onChange={(e) => setSelectedType(e.target.value)}
-  className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
->
-  <option>All Types</option>
-  <option>Dispatches</option>
-  <option>Monographs</option>
-  <option>Interviews</option>
-</select>
+            <select
+              value={selectedTopic}
+              onChange={(e) => setSelectedTopic(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
+            >
+              <option>All Topics</option>
+              <option>Deep Learning</option>
+              <option>Venture Capital</option>
+              <option>Silicon Fabs</option>
+            </select>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
+            >
+              <option>All Types</option>
+              <option>Dispatches</option>
+              <option>Monographs</option>
+              <option>Interviews</option>
+            </select>
           </div>
         </div>
 
         {/* Latest Dispatches List */}
         <div className="space-y-4">
-  {latestLoading ? (
-    <div className="py-10 text-center">
-      <p className="text-sm font-mono text-slate-400">
-        Loading stories...
-      </p>
-    </div>
-  ) : filteredArticles.length === 0 ? (
-    <div className="py-10 text-center border border-dashed border-slate-200 rounded-lg">
-      <p className="text-sm font-mono text-slate-400">
-        No stories match your filters.
-      </p>
-    </div>
-  ) : (
-    filteredArticles.map((article) => (
-      <div
-        key={article.id}
-        onClick={() => onNavigate("article", article.id)}
-        className="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
-      >
-        <div className="space-y-1.5 max-w-3xl">
-          <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-              {article.category}
-            </span>
+          {latestLoading ? (
+            <div className="py-10 text-center">
+              <p className="text-sm font-mono text-slate-400">
+                Loading stories...
+              </p>
+            </div>
+          ) : filteredArticles.length === 0 ? (
+            <div className="py-10 text-center border border-dashed border-slate-200 rounded-lg">
+              <p className="text-sm font-mono text-slate-400">
+                No stories match your filters.
+              </p>
+            </div>
+          ) : (
+            filteredArticles.map((article) => (
+              <div
+                key={article.id}
+                onClick={() => onNavigate("article", article.id)}
+                className="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group"
+              >
+                <div className="space-y-1.5 max-w-3xl">
+                  <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
+                    <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      {article.category}
+                    </span>
 
-            <span>•</span>
+                    <span>•</span>
 
-            <span>{article.timeAgo}</span>
+                    <span>{article.timeAgo}</span>
 
-            <span>•</span>
+                    <span>•</span>
 
-            <span>{article.readTime}</span>
-          </div>
+                    <span>{article.readTime}</span>
+                  </div>
 
-          <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-            {article.title}
-          </h3>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                    {article.title}
+                  </h3>
 
-          <p className="text-xs text-slate-500 leading-relaxed">
-            {article.description}
-          </p>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {article.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleSave(article.id);
+                    }}
+                    className={`p-2 rounded border transition-colors ${isSaved(article.id)
+                      ? "bg-emerald-50 text-emerald-600 border-emerald-300"
+                      : "text-slate-400 hover:text-slate-700 border-slate-200"
+                      }`}
+                    title="Save Story"
+                  >
+                    <Bookmark className="w-4 h-4 fill-current" />
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate("article", article.id);
+                    }}
+                    className="px-3 py-1.5 rounded bg-slate-50 text-slate-700 group-hover:bg-slate-950 group-hover:text-white transition-colors text-xs font-mono font-bold flex items-center space-x-1"
+                  >
+                    <span>Read →</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-
-        <div className="flex items-center space-x-2 shrink-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSave(article.id);
-            }}
-            className={`p-2 rounded border transition-colors ${
-              isSaved(article.id)
-                ? "bg-emerald-50 text-emerald-600 border-emerald-300"
-                : "text-slate-400 hover:text-slate-700 border-slate-200"
-            }`}
-            title="Save Story"
-          >
-            <Bookmark className="w-4 h-4 fill-current" />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate("article", article.id);
-            }}
-            className="px-3 py-1.5 rounded bg-slate-50 text-slate-700 group-hover:bg-slate-950 group-hover:text-white transition-colors text-xs font-mono font-bold flex items-center space-x-1"
-          >
-            <span>Read →</span>
-          </button>
-        </div>
-      </div>
-    ))
-  )}
-</div>
 
         <div className="text-center mt-8">
           <button
@@ -660,7 +725,7 @@ useEffect(() => {
           >
             <span>Load more stories ⤓</span>
           </button>
-          
+
         </div>
       </section>
 
@@ -909,90 +974,38 @@ useEffect(() => {
         {/* Operators */}
         <div className="mb-6">
           <h3 className="text-xs font-mono text-slate-400 tracking-wider font-semibold mb-3">
-            Operators & Researchers
+            Operators &amp; Researchers
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {OPERATORS_LIST.slice(0, 4).map((op) => {
-              const following = followedOperators[op.id];
-              return (
-                <div
-                  key={op.id}
-                  className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <img
-                      src={op.avatar}
-                      alt={op.name}
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
-                    />
-                    <div className="truncate">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">
-                        {op.name}
-                      </h4>
-                      <p className="text-[10px] text-slate-500 truncate">
-                        {op.company}
-                      </p>
-                    </div>
+            {TEAM_MEMBERS.map((op) => (
+              <a
+                key={op.id}
+                href={op.portfolioUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center gap-2.5 hover:border-emerald-300 hover:shadow-sm transition-all group no-underline"
+              >
+                <div className="flex items-center space-x-2.5 truncate flex-1">
+                  <img
+                    src={op.avatar}
+                    alt={op.name}
+                    className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+                  />
+                  <div className="truncate">
+                    <h4 className="text-xs font-bold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
+                      {op.name}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      {op.company}
+                    </p>
                   </div>
-
-                  <button
-                    onClick={() => toggleOperatorFollow(op.id)}
-                    className={`ml-2 px-2.5 py-1 text-[10px] font-mono font-bold rounded transition-colors ${
-                      following
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {following ? 'Following ✓' : 'Follow +'}
-                  </button>
                 </div>
-              );
-            })}
+                <span className="text-[10px] font-mono text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">↗</span>
+              </a>
+            ))}
           </div>
         </div>
 
-        {/* Enterprises */}
-        <div>
-          <h3 className="text-xs font-mono text-slate-400 tracking-wider font-semibold mb-3">
-            Enterprises & Startups
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {COMPANIES_LIST.slice(0, 4).map((co) => {
-              const following = followedCompanies[co.id];
-              return (
-                <div
-                  key={co.id}
-                  className="bg-white p-3.5 rounded-lg border border-slate-200 flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <div className="w-9 h-9 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">
-                      {co.tag}
-                    </div>
-                    <div className="truncate">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">
-                        {co.name}
-                      </h4>
-                      <p className="text-[10px] text-slate-500 truncate">
-                        {co.badge} • {co.valuation}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => toggleCompanyFollow(co.id)}
-                    className={`ml-2 px-2.5 py-1 text-[10px] font-mono font-bold rounded transition-colors ${
-                      following
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {following ? 'Following ✓' : 'Follow +'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </section>
 
       {/* 10. STAY AHEAD OF WHAT\'S NEXT (Newsletter CTA - matching 6.png) */}
