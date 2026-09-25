@@ -33,6 +33,10 @@ interface Article {
   status?: string;
   created_at?: string;
   heroAperture?: string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  saves?: number;
 }
 
 export const ArticleView: React.FC<ArticleViewProps> = ({
@@ -43,6 +47,10 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
 }) => {
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [commentDraft, setCommentDraft] = useState<string>('');
+  const [isLiked, setIsLiked] = useState<boolean>(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [commentList, setCommentList] = useState<string[]>([]);
 
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
 
@@ -68,10 +76,29 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
 
         if (isMounted) {
           if (data) {
-            setArticle(data as Article);
+            const statsResponse = await fetch(`/api/public/article/${encodeURIComponent(articleId)}/engagement`);
+            const stats = statsResponse.ok ? await statsResponse.json() : null;
+            const resolved = {
+              ...(data as Article),
+              views: Number(stats?.views ?? (data as Article).views ?? 0),
+              likes: Number(stats?.likes ?? 0),
+              comments: Number(stats?.comments ?? 0),
+              saves: Number(stats?.saves ?? 0),
+            };
+            setArticle(resolved);
+            setCommentList(stats?.commentTexts ?? []);
+            setIsSaved((savedIds ?? []).includes(articleId));
           } else {
             setArticle(null);
           }
+        }
+
+        if (isMounted) {
+          fetch(`/api/public/article/${encodeURIComponent(articleId)}/engagement`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'view' }),
+          }).catch(() => undefined);
         }
       } catch (error) {
         console.error("Error loading article:", error);
@@ -90,7 +117,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [articleId]);
+  }, [articleId, savedIds]);
 
   const toggleFollow = (name: string) => {
     setFollowingMap((prev) => ({
@@ -141,8 +168,6 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
       </div>
     );
   }
-
-  const isSaved = (savedIds ?? []).includes(article.id);
 
   const articleReadTime =
     article.readTime || article.read_time || "5 min read";
@@ -233,9 +258,19 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap">
             <button
-              onClick={() => onToggleSave(article.id)}
+              onClick={async () => {
+                const nextState = !isSaved;
+                setIsSaved(nextState);
+                onToggleSave(article.id);
+                await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: nextState ? 'save' : 'unsave' }),
+                });
+                setArticle((current) => current ? { ...current, saves: Math.max(0, (current.saves ?? 0) + (nextState ? 1 : -1)) } : current);
+              }}
               className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
                 isSaved
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
@@ -247,18 +282,38 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             </button>
 
             <button
+              onClick={async () => {
+                const nextState = !isLiked;
+                setIsLiked(nextState);
+                await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: nextState ? 'like' : 'unlike' }),
+                });
+                setArticle((current) => current ? { ...current, likes: Math.max(0, (current.likes ?? 0) + (nextState ? 1 : -1)) } : current);
+              }}
+              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
+                isLiked ? 'bg-rose-50 text-rose-700 border border-rose-300' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>{isLiked ? 'Liked' : 'Like'}</span>
+              <span>{(article.likes ?? 0).toLocaleString()}</span>
+            </button>
+
+            <button
               onClick={() => {
+                const articleUrl = `${window.location.origin}/article/${encodeURIComponent(article.id)}`;
                 if (navigator.clipboard?.writeText) {
                   navigator.clipboard
-                    .writeText(window.location.href)
+                    .writeText(articleUrl)
                     .then(() => {
-                      alert("Monograph URL copied to telemetry buffer.");
+                      alert("Article link copied to clipboard.");
                     })
                     .catch(() => {
-                      alert("Unable to copy article URL.");
+                      alert(`Share this article: ${articleUrl}`);
                     });
                 } else {
-                  alert("Clipboard action not supported in this environment.");
+                  alert(`Share this article: ${articleUrl}`);
                 }
               }}
               className="p-1.5 rounded border border-slate-300 hover:bg-slate-50 text-slate-600 transition-colors"
@@ -319,6 +374,67 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             </p>
           </div>
         )}
+
+        <div className="mb-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-600">
+            <span className="inline-flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-emerald-600" /> {(article.views ?? 0).toLocaleString()} views</span>
+            <span className="inline-flex items-center gap-1.5"><ArrowUp className="w-3.5 h-3.5 text-emerald-600" /> {(article.likes ?? 0).toLocaleString()} likes</span>
+            <span className="inline-flex items-center gap-1.5"><Bookmark className="w-3.5 h-3.5 text-emerald-600" /> {(article.saves ?? 0).toLocaleString()} saves</span>
+            <span className="inline-flex items-center gap-1.5"><Share2 className="w-3.5 h-3.5 text-emerald-600" /> {(article.comments ?? 0).toLocaleString()} comments</span>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
+            <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-600">Comments</h3>
+            <div className="mt-4 space-y-3">
+              {commentList.length > 0 ? (
+                commentList.map((comment, index) => (
+                  <div key={`${comment}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                    {comment}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">No comments yet. Be the first to comment.</p>
+              )}
+            </div>
+
+            <form
+              className="mt-5 flex flex-col gap-3 sm:flex-row"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const trimmed = commentDraft.trim();
+                if (!trimmed) return;
+
+                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'comment', comment: trimmed }),
+                });
+
+                if (response.ok) {
+                  const payload = await response.json();
+                  setCommentList(payload.commentTexts ?? []);
+                  setArticle((current) => current ? { ...current, comments: Number(payload.comments ?? current.comments ?? 0) } : current);
+                }
+
+                setCommentDraft('');
+              }}
+            >
+              <input
+                type="text"
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                placeholder="Drop a thought on the article"
+                className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500"
+              />
+              <button
+                type="submit"
+                className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-slate-800"
+              >
+                Post Comment
+              </button>
+            </form>
+          </div>
+        </div>
 
         {/* =========================================
             MULTI-COLUMN PROSE + SIDEBAR

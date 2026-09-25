@@ -22,6 +22,10 @@ export default function App() {
       return;
     }
     if (path.startsWith('/article/')) {
+      const articleId = decodeURIComponent(path.slice('/article/'.length));
+      if (articleId) {
+        setSelectedArticleId(articleId);
+      }
       setCurrentScreen('article');
       return;
     }

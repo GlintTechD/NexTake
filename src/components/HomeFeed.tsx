@@ -169,12 +169,29 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   const isSaved = (id: string) => savedIds.includes(id);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (emailInput.trim()) {
+    if (!emailInput.trim()) return;
+
+    try {
+      const response = await fetch('/api/public/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: emailInput, frequency: 'daily' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to save subscription.');
+      }
+
       setEmailSubscribed(true);
       setTimeout(() => setEmailSubscribed(false), 4000);
       setEmailInput('');
+    } catch (error) {
+      console.error('Home newsletter subscribe failed:', error);
+      setEmailSubscribed(false);
     }
   };
   useEffect(() => {

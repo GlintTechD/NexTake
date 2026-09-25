@@ -15,14 +15,32 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+
+    try {
+      const response = await fetch('/api/public/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, frequency }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to save subscription.');
+      }
+
       setIsSubscribed(true);
-    }, 600);
+    } catch (error) {
+      console.error('Newsletter subscribe failed:', error);
+      setIsSubscribed(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const readEnv = (key: string, fallback?: string) => {
+const readEnv = (key: string, fallback = ''): string => {
   const value = process.env[key];
   if (value === undefined || value === '') {
     return fallback;
