@@ -686,7 +686,7 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
                 </div>
 
                 <h3
-                  onClick={() => onNavigate('article')}
+                  onClick={() => onNavigate('article', 'dispatch-842')}
                   className="text-lg sm:text-xl lg:text-2xl font-bold text-white hover:text-emerald-400 transition-colors cursor-pointer leading-snug"
                 >
                   Anthropic & DeepMind Architect Autonomous Model Synthesizers with Real-Time Verification
@@ -703,7 +703,7 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
 
               <div className="shrink-0 flex items-center pt-2 lg:pt-0">
                 <button
-                  onClick={() => onNavigate('article')}
+                  onClick={() => onNavigate('article', 'dispatch-842')}
                   className="min-h-[44px] w-full sm:w-auto px-6 py-3 rounded-lg bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider flex items-center justify-center space-x-2 transition-all shadow-[0_0_15px_rgba(0,242,170,0.25)] hover:shadow-[0_0_20px_rgba(0,242,170,0.4)] active:scale-95"
                 >
                   <span>Read the full story</span>

@@ -517,9 +517,19 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                       <span>{takeaway.num}</span>
                       <span>{takeaway.label}</span>
                     </div>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-4">
                       {takeaway.text}
                     </p>
+                    {takeaway.text.length > 150 && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigate('article', activeBigStory.id)}
+                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
+                      >
+                        <span>Read more</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

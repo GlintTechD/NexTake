@@ -477,7 +477,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
 
             {/* Related Investigative Dispatch */}
             <div
-              onClick={() => onNavigate('article')}
+              onClick={() => onNavigate('article', 'dispatch-842')}
               className="bg-white rounded-xl border border-slate-200 p-4 group cursor-pointer hover:border-slate-400 transition-colors"
             >
               <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">

@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { FEATURED_ARTICLE } from "../data/mockData";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
@@ -203,7 +204,28 @@ export async function getLatestArticles(): Promise<LatestArticle[]> {
 // --------------------------------------
 
 export async function getArticleById(id: string): Promise<Article | null> {
-  if (!id || !supabase) return null;
+  if (!id) return null;
+
+  if (id === FEATURED_ARTICLE.id) {
+    return {
+      id: FEATURED_ARTICLE.id,
+      title: FEATURED_ARTICLE.title,
+      category: FEATURED_ARTICLE.category,
+      excerpt: FEATURED_ARTICLE.subtitle,
+      content: FEATURED_ARTICLE.contentSections
+        .flatMap((section) => section.paragraphs)
+        .join("\n\n"),
+      author: FEATURED_ARTICLE.author.name,
+      avatar: FEATURED_ARTICLE.author.avatar,
+      image: FEATURED_ARTICLE.heroImage,
+      date: FEATURED_ARTICLE.date,
+      readTime: FEATURED_ARTICLE.readTime,
+      status: "published",
+      heroAperture: FEATURED_ARTICLE.heroAperture,
+    };
+  }
+
+  if (!supabase) return null;
 
   const { data, error } = await supabase
     .from("articles")

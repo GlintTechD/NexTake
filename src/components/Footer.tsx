@@ -255,7 +255,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('article')}
+                  onClick={() => onNavigate('article', 'dispatch-842')}
                   className="hover:text-emerald-400 transition-colors text-left"
                 >
                   Deep Dive Monographs

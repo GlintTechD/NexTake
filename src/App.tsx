@@ -3,6 +3,7 @@ import { ScreenView } from './types';
 import { Navbar } from './components/Navbar';
 import { HomeFeed } from './components/HomeFeed';
 import { ArticleView } from './components/ArticleView';
+import { CommentsView } from './components/CommentsView';
 import { ExploreView } from './components/ExploreView';
 import { ShortsStage } from './components/ShortsStage';
 import { InterviewView } from './components/InterviewView';
@@ -12,9 +13,36 @@ import { DailyEditModal } from './components/DailyEditModal';
 import { ContactModal } from './components/ContactModal';
 import { PostingsPortal } from './components/PostingsPortal';
 
+const getInitialRoute = (): { screen: ScreenView; articleId: string } => {
+  if (typeof window === 'undefined') {
+    return { screen: 'home', articleId: 'dispatch-842' };
+  }
+
+  const path = window.location.pathname;
+  if (path.startsWith('/article/') && path.endsWith('/comments')) {
+    const articleId = decodeURIComponent(path.slice('/article/'.length, -'/comments'.length));
+    return {
+      screen: articleId ? 'comments' : 'home',
+      articleId: articleId || 'dispatch-842',
+    };
+  }
+  if (path.startsWith('/article/')) {
+    const articleId = decodeURIComponent(path.slice('/article/'.length));
+    return {
+      screen: articleId ? 'article' : 'home',
+      articleId: articleId || 'dispatch-842',
+    };
+  }
+  if (path === '/explore') return { screen: 'explore', articleId: 'dispatch-842' };
+  if (path === '/shorts') return { screen: 'shorts', articleId: 'dispatch-842' };
+  if (path === '/interview') return { screen: 'interview', articleId: 'dispatch-842' };
+  return { screen: 'home', articleId: 'dispatch-842' };
+};
+
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<ScreenView>('home');
-  const [selectedArticleId, setSelectedArticleId] = useState<string>('dispatch-842');
+  const initialRoute = getInitialRoute();
+  const [currentScreen, setCurrentScreen] = useState<ScreenView>(initialRoute.screen);
+  const [selectedArticleId, setSelectedArticleId] = useState<string>(initialRoute.articleId);
 
   const syncCurrentScreenFromPath = () => {
     const path = window.location.pathname;
@@ -22,6 +50,12 @@ export default function App() {
       return;
     }
     if (path.startsWith('/article/')) {
+      if (path.endsWith('/comments')) {
+        const articleId = decodeURIComponent(path.slice('/article/'.length, -'/comments'.length));
+        if (articleId) setSelectedArticleId(articleId);
+        setCurrentScreen('comments');
+        return;
+      }
       const articleId = decodeURIComponent(path.slice('/article/'.length));
       if (articleId) {
         setSelectedArticleId(articleId);
@@ -66,6 +100,7 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
+        window.history.pushState({}, '', '/explore');
         setCurrentScreen('explore');
       }
     };
@@ -94,6 +129,9 @@ export default function App() {
     } else if (screen === 'article') {
       const articleId = param ?? selectedArticleId;
       window.history.pushState({}, '', `/article/${articleId}`);
+    } else if (screen === 'comments') {
+      const articleId = param ?? selectedArticleId;
+      window.history.pushState({}, '', `/article/${articleId}/comments`);
     } else if (screen === 'postings') {
       window.history.pushState({}, '', '/postings');
     }
@@ -151,6 +189,13 @@ export default function App() {
           />
         )}
 
+        {currentScreen === 'comments' && (
+          <CommentsView
+            onNavigate={handleNavigate}
+            articleId={selectedArticleId}
+          />
+        )}
+
         {currentScreen === 'explore' && (
           <ExploreView
             onNavigate={handleNavigate}
@@ -164,7 +209,7 @@ export default function App() {
         {currentScreen === 'shorts' && (
           <ShortsStage
             onNavigate={handleNavigate}
-            onClose={() => setCurrentScreen('home')}
+            onClose={() => handleNavigate('home')}
             savedIds={savedIds}
             onToggleSave={handleToggleSave}
           />

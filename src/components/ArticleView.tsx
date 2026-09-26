@@ -88,6 +88,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             setArticle(resolved);
             setCommentList(stats?.commentTexts ?? []);
             setIsSaved((savedIds ?? []).includes(articleId));
+            setIsLiked(window.localStorage.getItem(`nextake-liked-${articleId}`) === 'true');
           } else {
             setArticle(null);
           }
@@ -285,6 +286,11 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               onClick={async () => {
                 const nextState = !isLiked;
                 setIsLiked(nextState);
+                if (nextState) {
+                  window.localStorage.setItem(`nextake-liked-${article.id}`, 'true');
+                } else {
+                  window.localStorage.removeItem(`nextake-liked-${article.id}`);
+                }
                 await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -354,89 +360,6 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
         )}
 
         {/* =========================================
-            WHAT SHOULD I KNOW?
-        ========================================== */}
-        {article.excerpt && (
-          <div className="rounded-xl border-2 border-[#00f2aa]/70 bg-gradient-to-br from-emerald-50/50 to-cyan-50/30 p-6 sm:p-8 mb-12 relative shadow-sm">
-            <div className="flex items-center justify-between mb-6 pb-2 border-b border-emerald-500/20">
-              <div className="flex items-center space-x-2 font-mono text-xs font-bold text-emerald-900 tracking-wider">
-                <span>What should I know?</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] border border-emerald-300">
-                  Article summary
-                </span>
-              </div>
-
-              <Zap className="w-4 h-4 text-emerald-600" />
-            </div>
-
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-              {article.excerpt}
-            </p>
-          </div>
-        )}
-
-        <div className="mb-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-600">
-            <span className="inline-flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-emerald-600" /> {(article.views ?? 0).toLocaleString()} views</span>
-            <span className="inline-flex items-center gap-1.5"><ArrowUp className="w-3.5 h-3.5 text-emerald-600" /> {(article.likes ?? 0).toLocaleString()} likes</span>
-            <span className="inline-flex items-center gap-1.5"><Bookmark className="w-3.5 h-3.5 text-emerald-600" /> {(article.saves ?? 0).toLocaleString()} saves</span>
-            <span className="inline-flex items-center gap-1.5"><Share2 className="w-3.5 h-3.5 text-emerald-600" /> {(article.comments ?? 0).toLocaleString()} comments</span>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-600">Comments</h3>
-            <div className="mt-4 space-y-3">
-              {commentList.length > 0 ? (
-                commentList.map((comment, index) => (
-                  <div key={`${comment}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                    {comment}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">No comments yet. Be the first to comment.</p>
-              )}
-            </div>
-
-            <form
-              className="mt-5 flex flex-col gap-3 sm:flex-row"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                const trimmed = commentDraft.trim();
-                if (!trimmed) return;
-
-                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'comment', comment: trimmed }),
-                });
-
-                if (response.ok) {
-                  const payload = await response.json();
-                  setCommentList(payload.commentTexts ?? []);
-                  setArticle((current) => current ? { ...current, comments: Number(payload.comments ?? current.comments ?? 0) } : current);
-                }
-
-                setCommentDraft('');
-              }}
-            >
-              <input
-                type="text"
-                value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                placeholder="Drop a thought on the article"
-                className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500"
-              />
-              <button
-                type="submit"
-                className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-slate-800"
-              >
-                Post Comment
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* =========================================
             MULTI-COLUMN PROSE + SIDEBAR
         ========================================== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -444,8 +367,37 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               MAIN ARTICLE
           ======================================== */}
           <div className="lg:col-span-8 space-y-8 text-slate-800 font-editorial text-lg leading-[1.8]">
-            {/* Vertical Brief / Short Embed Banner */}
-            <div className="my-8 rounded-xl bg-[#090d14] text-white p-5 sm:p-6 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 font-sans">
+            {/* =====================================
+                REAL ARTICLE CONTENT FROM SUPABASE
+            ====================================== */}
+            <div className="font-editorial text-lg text-slate-800 leading-[1.8] whitespace-pre-wrap">
+              {article.content ? (
+                article.content
+              ) : (
+                <p className="text-slate-400">No article content available.</p>
+              )}
+            </div>
+
+            {article.excerpt && (
+              <div className="rounded-xl border-2 border-[#00f2aa]/70 bg-gradient-to-br from-emerald-50/50 to-cyan-50/30 p-6 sm:p-8 relative shadow-sm">
+                <div className="flex items-center justify-between mb-6 pb-2 border-b border-emerald-500/20">
+                  <div className="flex items-center space-x-2 font-mono text-xs font-bold text-emerald-900 tracking-wider">
+                    <span>What should I know?</span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] border border-emerald-300">
+                      Article summary
+                    </span>
+                  </div>
+
+                  <Zap className="w-4 h-4 text-emerald-600" />
+                </div>
+
+                <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                  {article.excerpt}
+                </p>
+              </div>
+            )}
+
+            <div className="rounded-xl bg-[#090d14] text-white p-5 sm:p-6 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 font-sans">
               <div className="flex items-center space-x-4">
                 <div
                   role="button"
@@ -491,16 +443,78 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               </button>
             </div>
 
-            {/* =====================================
-                REAL ARTICLE CONTENT FROM SUPABASE
-            ====================================== */}
-            <div className="font-editorial text-lg text-slate-800 leading-[1.8] whitespace-pre-wrap">
-              {article.content ? (
-                article.content
-              ) : (
-                <p className="text-slate-400">No article content available.</p>
+            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5" aria-label="Article activity">
+              <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-600">Activity</h2>
+              <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-mono text-slate-600">
+                <span className="inline-flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-emerald-600" /> {(article.views ?? 0).toLocaleString()} views</span>
+                <span className="inline-flex items-center gap-1.5"><ArrowUp className="h-3.5 w-3.5 text-emerald-600" /> {(article.likes ?? 0).toLocaleString()} likes</span>
+                <span className="inline-flex items-center gap-1.5"><Bookmark className="h-3.5 w-3.5 text-emerald-600" /> {(article.saves ?? 0).toLocaleString()} saves</span>
+                <span className="inline-flex items-center gap-1.5"><Share2 className="h-3.5 w-3.5 text-emerald-600" /> {(article.comments ?? 0).toLocaleString()} comments</span>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5" aria-label="Comments">
+              <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-600">Comments</h2>
+              <div className="mt-4 space-y-3">
+                {commentList.length > 0 ? (
+                  commentList.slice(0, 5).map((comment, index) => (
+                    <div key={`${comment}-${index}`} className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                      {comment}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">No comments yet. Be the first to comment.</p>
+                )}
+              </div>
+
+              {commentList.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate("comments", article.id)}
+                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
+                >
+                  <span>View more comments</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
               )}
-            </div>
+
+              <form
+                className="mt-5 flex flex-col gap-3 sm:flex-row"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  const trimmed = commentDraft.trim();
+                  if (!trimmed) return;
+
+                  const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'comment', comment: trimmed }),
+                  });
+
+                  if (response.ok) {
+                    const payload = await response.json();
+                    setCommentList(payload.commentTexts ?? []);
+                    setArticle((current) => current ? { ...current, comments: Number(payload.comments ?? current.comments ?? 0) } : current);
+                  }
+
+                  setCommentDraft('');
+                }}
+              >
+                <input
+                  type="text"
+                  value={commentDraft}
+                  onChange={(event) => setCommentDraft(event.target.value)}
+                  placeholder="Drop a thought on the article"
+                  className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500"
+                />
+                <button
+                  type="submit"
+                  className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-slate-800"
+                >
+                  Post Comment
+                </button>
+              </form>
+            </section>
 
             {/* =====================================
                 SECTION 02

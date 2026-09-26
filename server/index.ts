@@ -79,13 +79,38 @@ const publicActivities: Array<{
   user: string;
   type: 'publish' | 'edit' | 'subscriber' | 'system';
 }> = [];
-const articleEngagement = new Map<string, {
+type ArticleEngagement = {
   views: number;
   likes: number;
   comments: number;
   saves: number;
   commentTexts: string[];
-}>();
+};
+
+const engagementFilePath = path.join(process.cwd(), 'server', '.engagement.json');
+const articleEngagement = new Map<string, ArticleEngagement>();
+
+try {
+  const storedEngagement = JSON.parse(fs.readFileSync(engagementFilePath, 'utf8')) as Record<string, ArticleEngagement>;
+  for (const [articleId, engagement] of Object.entries(storedEngagement)) {
+    articleEngagement.set(articleId, {
+      views: Number(engagement.views ?? 0),
+      likes: Number(engagement.likes ?? 0),
+      comments: Number(engagement.comments ?? engagement.commentTexts?.length ?? 0),
+      saves: Number(engagement.saves ?? 0),
+      commentTexts: Array.isArray(engagement.commentTexts) ? engagement.commentTexts.map(String) : [],
+    });
+  }
+} catch {
+}
+
+const persistArticleEngagement = () => {
+  fs.writeFileSync(
+    engagementFilePath,
+    JSON.stringify(Object.fromEntries(articleEngagement), null, 2),
+    'utf8',
+  );
+};
 
 const getOrCreateArticleEngagement = (articleId: string) => {
   const existing = articleEngagement.get(articleId);
@@ -460,9 +485,13 @@ app.get('/api/public/metrics', async (_request, response) => {
       : getLocalPublishedContent().filter((item) => isPubliclyVisible(item.status, item.scheduledFor, item.publishedAt));
 
     const totalPageViews = Array.from(pageViews.values()).reduce((sum, value) => sum + value, 0);
+    const totalArticleViews = Array.from(articleEngagement.values()).reduce(
+      (sum, engagement) => sum + engagement.views,
+      0,
+    );
     const newsletterSubscribersCount = newsletterSubscribers.size;
     const publishedCount = items.length;
-    const monthlyVisitors = Math.max(publishedCount * 300, totalPageViews);
+    const monthlyVisitors = totalPageViews + totalArticleViews;
 
     response.json({
       ok: true,
@@ -500,7 +529,7 @@ app.get('/api/public/article/:id/engagement', async (request, response) => {
     likes: engagement.likes,
     comments: engagement.comments,
     saves: engagement.saves,
-    commentTexts: engagement.commentTexts.slice(-10),
+    commentTexts: engagement.commentTexts,
   });
 });
 
@@ -511,6 +540,7 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'view') {
     engagement.views += 1;
+    persistArticleEngagement();
     recordPublicActivity({
       action: 'Article viewed',
       target: articleId,
@@ -521,6 +551,7 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'like') {
     engagement.likes += 1;
+    persistArticleEngagement();
     recordPublicActivity({
       action: 'Article liked',
       target: articleId,
@@ -531,10 +562,12 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'unlike') {
     engagement.likes = Math.max(0, engagement.likes - 1);
+    persistArticleEngagement();
   }
 
   if (action === 'save') {
     engagement.saves += 1;
+    persistArticleEngagement();
     recordPublicActivity({
       action: 'Article saved',
       target: articleId,
@@ -545,6 +578,7 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'unsave') {
     engagement.saves = Math.max(0, engagement.saves - 1);
+    persistArticleEngagement();
   }
 
   if (action === 'comment') {
@@ -552,6 +586,7 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
     if (comment) {
       engagement.commentTexts.push(comment);
       engagement.comments = engagement.commentTexts.length;
+      persistArticleEngagement();
       recordPublicActivity({
         action: 'New article comment',
         target: articleId,
@@ -568,7 +603,7 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
     likes: engagement.likes,
     comments: engagement.comments,
     saves: engagement.saves,
-    commentTexts: engagement.commentTexts.slice(-10),
+    commentTexts: engagement.commentTexts,
   });
 });
 
