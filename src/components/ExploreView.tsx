@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ScreenView, SearchResultItem } from '../types';
+import { subscribeToNewsletter } from '../lib/newsletter';
 import {
   ALL_EXPLORE_ITEMS,
   DOMAIN_TOPICS,
@@ -20,12 +21,42 @@ import {
   Building2,
 } from 'lucide-react';
 
+type DateRange = '30d' | '24h' | '7d' | 'all';
+type ResultSort = 'relevance' | 'newest' | 'most-read';
+
+const getAgeInMinutes = (timeAgo?: string): number | null => {
+  const match = timeAgo?.match(/(\d+)\s*(m|min(?:ute)?s?|h|hours?|d|days?|w|weeks?|y|years?)\s+ago/i);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit.startsWith('m')) return amount;
+  if (unit.startsWith('h')) return amount * 60;
+  if (unit.startsWith('d')) return amount * 60 * 24;
+  if (unit.startsWith('w')) return amount * 60 * 24 * 7;
+  return amount * 60 * 24 * 365;
+};
+
+const getViewCount = (views?: string): number => {
+  const match = views?.match(/([\d,.]+)\s*([kmb])?/i);
+  if (!match) return 0;
+
+  const multiplier = match[2]?.toLowerCase() === 'm'
+    ? 1_000_000
+    : match[2]?.toLowerCase() === 'k'
+      ? 1_000
+      : match[2]?.toLowerCase() === 'b'
+        ? 1_000_000_000
+        : 1;
+
+  return Number(match[1].replace(/,/g, '')) * multiplier;
+};
+
 interface ExploreViewProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
   savedIds: string[];
   onToggleSave: (id: string) => void;
   initialQuery?: string;
-  onOpenDailyEdit: () => void;
 }
 
 export const ExploreView: React.FC<ExploreViewProps> = ({
@@ -33,7 +64,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   savedIds,
   onToggleSave,
   initialQuery = 'FINTECH',
-  onOpenDailyEdit,
 }) => {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [activeFilterTab, setActiveFilterTab] = useState('ALL');
@@ -42,6 +72,28 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   });
   const [followedOrgs, setFollowedOrgs] = useState<Record<string, boolean>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [dateRange, setDateRange] = useState<DateRange>('30d');
+  const [resultSort, setResultSort] = useState<ResultSort>('relevance');
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterStatus, setNewsletterStatus] = useState<'success' | 'error' | null>(null);
+  const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
+
+  const handleNewsletterSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsNewsletterSubmitting(true);
+    setNewsletterStatus(null);
+
+    try {
+      await subscribeToNewsletter(newsletterEmail);
+      setNewsletterEmail('');
+      setNewsletterStatus('success');
+    } catch (error) {
+      console.error('Explore newsletter subscribe failed:', error);
+      setNewsletterStatus('error');
+    } finally {
+      setIsNewsletterSubmitting(false);
+    }
+  };
 
   const trendingQueries = [
     'AI Agents',
@@ -92,9 +144,31 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     'VIDEOS & SHORTS': queryFiltered.filter((i) => i.type === 'short' || i.type === 'interview').length,
   }), [queryFiltered]);
 
+  const dateRangeMinutes: Record<Exclude<DateRange, 'all'>, number> = {
+    '24h': 60 * 24,
+    '7d': 60 * 24 * 7,
+    '30d': 60 * 24 * 30,
+  };
+  const visibleResults = filteredResults
+    .filter((item) => {
+      if (dateRange === 'all') return true;
+      const age = getAgeInMinutes(item.timeAgo);
+      return age === null || age <= dateRangeMinutes[dateRange];
+    })
+    .sort((first, second) => {
+      if (resultSort === 'newest') {
+        return (getAgeInMinutes(first.timeAgo) ?? Infinity)
+          - (getAgeInMinutes(second.timeAgo) ?? Infinity);
+      }
+      if (resultSort === 'most-read') {
+        return getViewCount(second.views) - getViewCount(first.views);
+      }
+      return 0;
+    });
+
   // Top result: first story with a badge or thumbnail
-  const topResult = filteredResults.find((i) => i.type === 'story' && (i.badge || i.thumbnail));
-  const gridItems = filteredResults.filter((i) => i !== topResult);
+  const topResult = visibleResults.find((i) => i.type === 'story' && (i.badge || i.thumbnail));
+  const gridItems = visibleResults.filter((i) => i !== topResult);
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
@@ -207,18 +281,28 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           </div>
 
           {/* Sorters and View Mode */}
-          <div className="flex items-center space-x-3">
-            <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none">
-              <option>Date: Past 30 Days</option>
-              <option>Past 24 Hours</option>
-              <option>Past 7 Days</option>
-              <option>All Time</option>
+          <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+            <select
+              aria-label="Filter results by date"
+              value={dateRange}
+              onChange={(event) => setDateRange(event.target.value as DateRange)}
+              className="w-full min-w-0 rounded border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:outline-none sm:w-auto"
+            >
+              <option value="30d">Date: Past 30 Days</option>
+              <option value="24h">Past 24 Hours</option>
+              <option value="7d">Past 7 Days</option>
+              <option value="all">All Time</option>
             </select>
 
-            <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none">
-              <option>Sort: Most Relevant</option>
-              <option>Newest First</option>
-              <option>Most Read</option>
+            <select
+              aria-label="Sort search results"
+              value={resultSort}
+              onChange={(event) => setResultSort(event.target.value as ResultSort)}
+              className="w-full min-w-0 rounded border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:outline-none sm:w-auto"
+            >
+              <option value="relevance">Sort: Most Relevant</option>
+              <option value="newest">Newest First</option>
+              <option value="most-read">Most Read</option>
             </select>
 
             <div className="hidden sm:flex items-center space-x-1 border border-slate-200 bg-white rounded p-0.5">
@@ -686,23 +770,39 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               Stay ahead of what's next.
             </h2>
             <p className="text-xs text-slate-400">
-              Curated investigative intelligence delivered directly to 84,000+ technology leaders, principal engineers, and venture partners at 08:00 UTC.
+              Request the Daily Edit briefing. Signup requests stay in server memory for the current session; email delivery is not enabled yet.
             </p>
           </div>
 
-          <div className="flex items-center space-x-2 w-full md:w-auto shrink-0">
+          <form onSubmit={handleNewsletterSubmit} className="w-full min-w-0 md:w-auto">
             <input
               type="email"
+              aria-label="Email address"
+              autoComplete="email"
+              required
+              value={newsletterEmail}
+              onChange={(event) => setNewsletterEmail(event.target.value)}
               placeholder="corporate.email@domain.com"
-              className="px-3.5 py-2 rounded bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+              className="mb-2 w-full min-w-0 rounded border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 md:mb-0 md:w-56"
             />
             <button
-              onClick={onOpenDailyEdit}
-              className="px-4 py-2 rounded bg-[#00f2aa] text-slate-950 font-mono font-bold text-xs tracking-wider shrink-0 hover:bg-[#00df9c] transition-colors"
+              type="submit"
+              disabled={isNewsletterSubmitting}
+              className="w-full shrink-0 rounded bg-[#00f2aa] px-4 py-2 text-slate-950 font-mono font-bold text-xs tracking-wider hover:bg-[#00df9c] transition-colors disabled:cursor-wait disabled:opacity-60 md:w-auto"
             >
-              Synchronize
+              {isNewsletterSubmitting ? 'Saving...' : 'Subscribe'}
             </button>
-          </div>
+            {newsletterStatus && (
+              <p
+                role={newsletterStatus === 'error' ? 'alert' : 'status'}
+                className={`mt-2 text-xs ${newsletterStatus === 'error' ? 'text-red-300' : 'text-emerald-300'}`}
+              >
+                {newsletterStatus === 'success'
+                  ? 'Request saved for this server session. Email delivery is not enabled yet.'
+                  : 'Unable to save your signup. Please try again.'}
+              </p>
+            )}
+          </form>
         </div>
       </section>
     </div>

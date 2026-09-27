@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenView } from '../types';
+import { subscribeToNewsletter } from '../lib/newsletter';
 import { HeroSlideshow } from './HeroSlideshow';
 import {
   FEATURED_ARTICLE,
@@ -109,7 +110,6 @@ interface HomeFeedProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
   savedIds: string[];
   onToggleSave: (id: string) => void;
-  onOpenDailyEdit: () => void;
   onOpenContact?: () => void;
 }
 
@@ -117,7 +117,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   onNavigate,
   savedIds,
   onToggleSave,
-  onOpenDailyEdit,
   onOpenContact,
 }) => {
 
@@ -141,6 +140,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   const [tickerIndex, setTickerIndex] = useState(0);
   const [emailInput, setEmailInput] = useState('');
   const [emailSubscribed, setEmailSubscribed] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
   const [dailyEditItems, setDailyEditItems] = useState<DailyEditItem[]>([]);
   const [dailyEditLoading, setDailyEditLoading] = useState(true);
 
@@ -173,25 +174,20 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     e.preventDefault();
     if (!emailInput.trim()) return;
 
+    setIsEmailSubmitting(true);
+    setEmailError('');
+
     try {
-      const response = await fetch('/api/public/newsletter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: emailInput, frequency: 'daily' }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Unable to save subscription.');
-      }
-
+      await subscribeToNewsletter(emailInput);
       setEmailSubscribed(true);
       setTimeout(() => setEmailSubscribed(false), 4000);
       setEmailInput('');
     } catch (error) {
       console.error('Home newsletter subscribe failed:', error);
       setEmailSubscribed(false);
+      setEmailError('Unable to save your signup. Please try again.');
+    } finally {
+      setIsEmailSubmitting(false);
     }
   };
   useEffect(() => {
@@ -1053,7 +1049,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             </h2>
 
             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-              Get the most important technology stories, insights, and updates delivered to your inbox every morning at 07:00 UTC.
+                      Request the Daily Edit briefing. Signup requests stay in server memory for the current session; email delivery is not enabled yet.
             </p>
 
             <form onSubmit={handleEmailSubmit} className="pt-2 flex flex-col sm:flex-row gap-3">
@@ -1067,14 +1063,16 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               />
               <button
                 type="submit"
-                className="px-6 py-3 rounded bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider transition-colors shrink-0"
+                disabled={isEmailSubmitting}
+                className="px-6 py-3 rounded bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider transition-colors shrink-0 disabled:cursor-wait disabled:opacity-60"
               >
-                {emailSubscribed ? 'Synchronized ✓' : 'Get the Daily Edit →'}
+                {isEmailSubmitting ? 'Saving...' : emailSubscribed ? 'Request received' : 'Get the Daily Edit →'}
               </button>
             </form>
+            {emailError && <p role="alert" className="pt-2 text-xs text-red-300">{emailError}</p>}
 
             <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 pt-2 gap-3">
-              <span>Zero spam • Unsubscribe anytime. Strict data protocol.</span>
+              <span>Signup requests are stored for this server session only.</span>
               <div className="flex items-center space-x-3">
                 <button
                   type="button"

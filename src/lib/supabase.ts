@@ -140,7 +140,7 @@ export interface DailyEditSettings {
 }
 
 export async function getDailyEditSettings(): Promise<DailyEditSettings | null> {
-  if (!supabase) return null;
+  if (!supabase || import.meta.env.VITE_ENABLE_DAILY_EDIT_SETTINGS !== "true") return null;
 
   const { data, error } = await supabase
     .from("daily_edit_settings")
@@ -149,6 +149,7 @@ export async function getDailyEditSettings(): Promise<DailyEditSettings | null> 
     .maybeSingle();
 
   if (error) {
+    if (error.code === "PGRST205" || error.code === "42P01") return null;
     console.error("Error loading Daily Edit settings:", error);
     return null;
   }

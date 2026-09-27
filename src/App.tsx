@@ -175,7 +175,6 @@ export default function App() {
             onNavigate={handleNavigate}
             savedIds={savedIds}
             onToggleSave={handleToggleSave}
-            onOpenDailyEdit={() => setIsDailyEditOpen(true)}
             onOpenContact={() => setIsContactOpen(true)}
           />
         )}
@@ -202,7 +201,6 @@ export default function App() {
             savedIds={savedIds}
             onToggleSave={handleToggleSave}
             initialQuery={exploreQuery}
-            onOpenDailyEdit={() => setIsDailyEditOpen(true)}
           />
         )}
 

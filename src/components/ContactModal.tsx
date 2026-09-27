@@ -78,7 +78,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
       id="contact-modal-overlay"
-      onClick={onClose}
+      onClick={handleReset}
     >
       <div
         className="relative w-full max-w-xl bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl overflow-hidden"
@@ -93,7 +93,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             </span>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleReset}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
             title="Close Contact Modal"
           >
@@ -114,7 +114,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               routed to our{" "}
               <span className="text-emerald-700 font-mono font-semibold">
                 {inquiryType === "tip"
-                  ? "secure investigative desk"
+                  ? "editorial tips inbox"
                   : inquiryType === "editorial"
                     ? "editorial board"
                     : inquiryType === "press"
@@ -259,8 +259,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               <div className="flex items-center space-x-2 text-[11px] font-mono text-emerald-800 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
                 <Shield className="w-4 h-4 shrink-0 text-emerald-600" />
                 <span>
-                  All leak dispatches are cryptographically isolated and
-                  stripped of telemetry.
+                  Do not send confidential material here. Submissions use our
+                  email provider and are not end-to-end encrypted.
                 </span>
               </div>
             )}
@@ -274,7 +274,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             {/* Actions */}
             <div className="flex items-center justify-between pt-2">
               <span className="text-[11px] font-mono text-slate-500">
-                Encrypted submission • Response &lt; 24h
+                Email submission • Response &lt; 24h
               </span>
               <button
                 type="submit"
