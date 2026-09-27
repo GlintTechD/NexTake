@@ -12,6 +12,7 @@ import { SavedStoriesDrawer } from './components/SavedStoriesDrawer';
 import { DailyEditModal } from './components/DailyEditModal';
 import { ContactModal } from './components/ContactModal';
 import { PostingsPortal } from './components/PostingsPortal';
+import { StartupsView } from './components/StartupsView';
 
 const getInitialRoute = (): { screen: ScreenView; articleId: string } => {
   if (typeof window === 'undefined') {
@@ -36,6 +37,7 @@ const getInitialRoute = (): { screen: ScreenView; articleId: string } => {
   if (path === '/explore') return { screen: 'explore', articleId: 'dispatch-842' };
   if (path === '/shorts') return { screen: 'shorts', articleId: 'dispatch-842' };
   if (path === '/interview') return { screen: 'interview', articleId: 'dispatch-842' };
+  if (path === '/startups') return { screen: 'startups', articleId: 'dispatch-842' };
   return { screen: 'home', articleId: 'dispatch-842' };
 };
 
@@ -71,11 +73,17 @@ export default function App() {
       setCurrentScreen('shorts');
       return;
     }
-    if (path === '/interview') {
-      setCurrentScreen('interview');
-      return;
-    }
-    setCurrentScreen('home');
+if (path === '/interview') {
+  setCurrentScreen('interview');
+  return;
+}
+
+if (path === '/startups') {
+  setCurrentScreen('startups');
+  return;
+}
+
+setCurrentScreen('home');
   };
 
   useEffect(() => {
@@ -134,6 +142,8 @@ export default function App() {
       window.history.pushState({}, '', `/article/${articleId}/comments`);
     } else if (screen === 'postings') {
       window.history.pushState({}, '', '/postings');
+    } else if (screen === 'startups') {
+      window.history.pushState({}, '', '/startups');
     }
 
     setCurrentScreen(screen);
@@ -220,6 +230,14 @@ export default function App() {
             onToggleSave={handleToggleSave}
           />
         )}
+        {currentScreen === 'startups' && (
+  <StartupsView
+    onNavigate={handleNavigate}
+    savedIds={savedIds}
+    onToggleSave={handleToggleSave}
+    onOpenContact={() => setIsContactOpen(true)}
+  />
+)}
       </main>
 
       {/* Global Footer (shown on all screens except shorts stage) */}

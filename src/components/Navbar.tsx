@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScreenView } from '../types';
-import { Search, Menu, X } from 'lucide-react';
+import { Search, Video, Mic, Rocket, Menu, X } from 'lucide-react';
 import logo from "../Pic/Logo.png";
 
 interface NavbarProps {
@@ -23,6 +23,32 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenContact,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [logoSrc, setLogoSrc] = useState<string>(() => {
+    return localStorage.getItem('nextake_custom_logo') || logo;
+  });
+  const [logoWidth, setLogoWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('nextake_logo_width');
+    return saved ? Number(saved) : 180;
+  });
+  const [logoHeight, setLogoHeight] = useState<number>(() => {
+    const saved = localStorage.getItem('nextake_logo_height');
+    return saved ? Number(saved) : 60;
+  });
+
+  useEffect(() => {
+    const handleLogoUpdate = () => {
+      const customLogo = localStorage.getItem('nextake_custom_logo');
+      const savedWidth = localStorage.getItem('nextake_logo_width');
+      const savedHeight = localStorage.getItem('nextake_logo_height');
+
+      setLogoSrc(customLogo || logo);
+      if (savedWidth) setLogoWidth(Number(savedWidth));
+      if (savedHeight) setLogoHeight(Number(savedHeight));
+    };
+
+    window.addEventListener('nextake_logo_updated', handleLogoUpdate);
+    return () => window.removeEventListener('nextake_logo_updated', handleLogoUpdate);
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 bg-[#070b10] border-b border-[#1f2937] text-white">
@@ -32,11 +58,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center">
           <button
             onClick={() => onNavigate('home')}
-            className="flex items-center space-x-2 text-left focus:outline-none group"
+            className="flex items-center space-x-2 text-left focus:outline-none group relative"
             id="brand-logo-btn"
+            title="NexTake Home"
           >
-            <span className="text-xl sm:text-2xl font-black tracking-tighter text-white group-hover:text-emerald-400 transition-colors w-30">
-             <img src={logo} alt="" />
+            <span className="text-xl sm:text-2xl font-black tracking-tighter text-white group-hover:text-emerald-400 transition-colors">
+              <img
+                src={logoSrc}
+                alt="Brand Logo"
+                style={{ width: `${logoWidth}px`, height: `${logoHeight}px` }}
+                className="max-w-[35vw] sm:max-w-none object-contain transition-all duration-200"
+              />
             </span>
           </button>
         </div>
@@ -53,23 +85,41 @@ export const Navbar: React.FC<NavbarProps> = ({
                 currentScreen === 'home' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
               } w-full sm:w-auto text-left`}
             >
-              Feed
+              Home
             </button>
             <button
               onClick={() => { onNavigate('shorts'); setIsMenuOpen(false); }}
               className={`px-2.5 sm:px-3 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
                 currentScreen === 'shorts' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full sm:w-auto text-left`}
+              } w-full sm:w-auto justify-start text-left`}
             >
-              
-              <span>Shorts</span>
+              <Video className="w-3.5 h-3.5" />
+              <span>Video</span>
+            </button>
+            <button
+              onClick={() => { onNavigate('interview'); setIsMenuOpen(false); }}
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
+                currentScreen === 'interview' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+              } w-full sm:w-auto justify-start text-left`}
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>Interviews</span>
+            </button>
+            <button
+              onClick={() => { onNavigate('startups'); setIsMenuOpen(false); }}
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
+                currentScreen === 'startups' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+              } w-full sm:w-auto justify-start text-left`}
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              <span>Startups</span>
             </button>
             <button
               onClick={() => { onNavigate('explore'); setIsMenuOpen(false); }}
               aria-label="Explore"
               className={`px-2.5 sm:px-3 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
                 currentScreen === 'explore' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full sm:w-auto text-left`}
+              } w-full sm:w-auto justify-start text-left`}
             >
               <Search className="w-3.5 h-3.5" />
               <span>Explore</span>

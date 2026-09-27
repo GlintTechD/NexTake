@@ -1,4 +1,11 @@
-export type ScreenView = 'home' | 'article' | 'comments' | 'explore' | 'shorts' | 'interview';
+export type ScreenView =
+  | 'home'
+  | 'article'
+  | 'comments'
+  | 'explore'
+  | 'shorts'
+  | 'interview'
+  | 'startups';
 
 export interface HeroSlideStory {
   id: string;
