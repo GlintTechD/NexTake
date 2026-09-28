@@ -1,0 +1,8 @@
+{
+  "name": "Remix NexTake",
+  "description": "High-signal investigative technology journalism, kinetic telemetry shorts, and executive monograph dispatches.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
