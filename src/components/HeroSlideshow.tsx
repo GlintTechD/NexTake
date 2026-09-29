@@ -91,11 +91,11 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
         imageAperture: "",
 
         author: {
-          name: article.author || "Next Edit",
+          name: article.author || "NexTake",
           role: article.author_role || "Contributor",
           avatar:
             article.avatar ||
-            "https://ui-avatars.com/api/?name=Next+Edit",
+            "https://ui-avatars.com/api/?name=NexTake",
         },
       }))
     : HERO_SLIDESHOW_STORIES;
@@ -419,7 +419,7 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
 
                   <span className="truncate max-w-[75%] text-slate-300/90">
                     {currentStory.imageAperture ||
-                      `© NEXT EDIT • DISPATCH ${currentStory.number}`}
+                      `© NEXTAKE • DISPATCH ${currentStory.number}`}
                   </span>
 
                   <span className="text-emerald-400 group-hover:underline flex items-center space-x-1 shrink-0 ml-2 font-semibold">

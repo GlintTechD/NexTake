@@ -1,4 +1,4 @@
-# NexTake
+# SOAIR Admin Page
 
 This project is a Vite + React frontend with an Express admin backend. It includes:
 
@@ -19,7 +19,7 @@ This project is a Vite + React frontend with an Express admin backend. It includ
 
 Before starting, install:
 
-- Node.js 20.19+ or 22.12+
+- Node.js 18+
 - PostgreSQL (if you want database-backed content storage)
 - A Resend account and API key (if you want real email OTP delivery)
 
@@ -31,27 +31,20 @@ npm install
 
 ## 2) Create your .env file
 
-Copy `.env.example` to `.env` in the project root, then fill in the values you
-use. Vite and the Express server read this root-level file when they start.
-Restart `npm run dev` after changing environment variables.
+Create a file named `.env` in the project root.
 
-### Client-side integrations
+Example:
 
-The `VITE_` variables configure EmailJS and Supabase in the browser. They are
-included in the client bundle, so only use public credentials here. Never put
-database passwords, Resend API keys, or other server secrets in a `VITE_` value.
-
-Set `VITE_EMAILJS_SERVICE_ID`, `VITE_EMAILJS_TEMPLATE_ID`, and
-`VITE_EMAILJS_PUBLIC_KEY` to enable the contact form. Set `VITE_SUPABASE_URL`
-and `VITE_SUPABASE_ANON_KEY` (or a Supabase publishable key) to enable
-Supabase-backed content. Protect the Supabase key with appropriate Row Level
-Security policies.
-Set `VITE_ENABLE_DAILY_EDIT_SETTINGS=true` only after creating the optional
-`daily_edit_settings` table in Supabase; it is disabled by default.
-
-Newsletter signup requests currently live in server memory for the current
-process session. They are not persisted or emailed; configure durable storage
-and a delivery provider before using newsletter signup in production.
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/soair"
+RESEND_API_KEY="your_resend_api_key"
+ADMIN_USERNAME="Glint"
+ADMIN_EMAIL="martins.me1@proton.me"
+SESSION_SECRET="replace-with-a-long-random-secret"
+APP_URL="http://localhost:4100"
+PORT="4101"
+NODE_ENV="development"
+```
 
 ## 3) Environment variables explained
 
@@ -131,7 +124,7 @@ The public base URL for the app.
 Example:
 
 ```env
-APP_URL="http://localhost:3000"
+APP_URL="http://localhost:4100"
 ```
 
 #### `PORT`
@@ -140,7 +133,7 @@ The backend port used by the Express server.
 Default in the project:
 
 ```env
-PORT="3000"
+PORT="4101"
 ```
 
 #### `NODE_ENV`
@@ -151,7 +144,6 @@ Typical values:
 ```env
 NODE_ENV="development"
 ```
-
 
 or in production:
 
@@ -164,7 +156,7 @@ These are also supported by the config file and have defaults if you do not add 
 
 ```env
 RESEND_FROM_EMAIL="onboarding@resend.dev"
-RESEND_FROM_NAME="NextEdit Admin"
+RESEND_FROM_NAME="NexTake Admin"
 ```
 
 ## 4) Database setup

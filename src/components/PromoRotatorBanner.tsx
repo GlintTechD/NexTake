@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, Sparkles, Tag, ShoppingBag, Clock, Percent, ExternalLink, Check } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Tag, ShoppingBag, Clock, Percent, ExternalLink, Check } from 'lucide-react';
 import shopperWomanImg from '../assets/images/sale_shopper_woman_1790347377287.jpg';
 import techShopperImg from '../assets/images/tech_gear_shopper_1790347390847.jpg';
 
@@ -215,7 +215,6 @@ export const PromoRotatorBanner: React.FC = () => {
             {/* 1. TOP WHITE TILTED BADGE: "SPECIAL OFFER" */}
             <div className="transform -rotate-2 hover:rotate-0 transition-transform">
               <div className="inline-flex items-center space-x-1.5 px-3 sm:px-5 py-1 sm:py-1.5 bg-white text-black font-black text-[10px] sm:text-xs md:text-sm tracking-wider uppercase shadow-[3px_4px_0px_#111111] rounded-xs border-2 border-black">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                 <span>{currentSlide.badge}</span>
                 <span className="ml-1 text-[9px] font-mono bg-red-600 text-white px-1.5 py-0.2 rounded font-bold">
                   {currentSlide.discount}

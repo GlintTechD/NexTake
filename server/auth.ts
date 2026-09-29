@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const buildResendFromAddress = (fromEmail?: string, fromName = 'NextEdit Admin') => {
+export const buildResendFromAddress = (fromEmail?: string, fromName = 'NexTake Admin') => {
   const email = fromEmail?.trim();
   if (!email) {
     throw new Error('RESEND_FROM_EMAIL is not configured. Set it to a verified Resend sender like onboarding@resend.dev or no-reply@yourdomain.com.');
@@ -11,7 +11,7 @@ export const buildResendFromAddress = (fromEmail?: string, fromName = 'NextEdit 
     throw new Error(`RESEND_FROM_EMAIL is invalid: ${email}. Use a valid sender address from your verified Resend domain.`);
   }
 
-  return `${fromName.trim() || 'NextEdit Admin'} <${email}>`;
+  return `${fromName.trim() || 'NexTake Admin'} <${email}>`;
 };
 
 export const buildOtpHash = (otp: string, secret: string) =>

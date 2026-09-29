@@ -79,38 +79,13 @@ const publicActivities: Array<{
   user: string;
   type: 'publish' | 'edit' | 'subscriber' | 'system';
 }> = [];
-type ArticleEngagement = {
+const articleEngagement = new Map<string, {
   views: number;
   likes: number;
   comments: number;
   saves: number;
   commentTexts: string[];
-};
-
-const engagementFilePath = path.join(process.cwd(), 'server', '.engagement.json');
-const articleEngagement = new Map<string, ArticleEngagement>();
-
-try {
-  const storedEngagement = JSON.parse(fs.readFileSync(engagementFilePath, 'utf8')) as Record<string, ArticleEngagement>;
-  for (const [articleId, engagement] of Object.entries(storedEngagement)) {
-    articleEngagement.set(articleId, {
-      views: Number(engagement.views ?? 0),
-      likes: Number(engagement.likes ?? 0),
-      comments: Number(engagement.comments ?? engagement.commentTexts?.length ?? 0),
-      saves: Number(engagement.saves ?? 0),
-      commentTexts: Array.isArray(engagement.commentTexts) ? engagement.commentTexts.map(String) : [],
-    });
-  }
-} catch {
-}
-
-const persistArticleEngagement = () => {
-  fs.writeFileSync(
-    engagementFilePath,
-    JSON.stringify(Object.fromEntries(articleEngagement), null, 2),
-    'utf8',
-  );
-};
+}>();
 
 const getOrCreateArticleEngagement = (articleId: string) => {
   const existing = articleEngagement.get(articleId);
@@ -239,7 +214,7 @@ const parseCookieHeader = (cookieHeader = '') => {
 
 const getSessionFromRequest = (request: express.Request) => {
   const cookieMap = parseCookieHeader(request.headers.cookie);
-  const rawValue = cookieMap.get('nextedit_admin');
+  const rawValue = cookieMap.get('nextake_admin');
   if (!rawValue) return null;
 
   const [sessionId, signature] = rawValue.split('.');
@@ -291,7 +266,7 @@ const sendOtpEmail = async (username: string, otp: string) => {
     body: JSON.stringify({
       from: fromAddress,
       to: [config.ADMIN_EMAIL],
-      subject: 'Your NextEdit admin OTP',
+      subject: 'Your NexTake admin OTP',
       html: `<p>Your OTP is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
     }),
   });
@@ -398,7 +373,7 @@ app.post('/api/auth/verify', (request, response) => {
 
   response.setHeader(
     'Set-Cookie',
-    `nextedit_admin=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600;${secureCookie}`,
+    `nextake_admin=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600;${secureCookie}`,
   );
 
   response.json({ ok: true, username });
@@ -406,7 +381,7 @@ app.post('/api/auth/verify', (request, response) => {
 
 app.post('/api/auth/logout', (request, response) => {
   const cookieMap = parseCookieHeader(request.headers.cookie);
-  const rawValue = cookieMap.get('nextedit_admin');
+  const rawValue = cookieMap.get('nextake_admin');
 
   if (rawValue) {
     const [sessionId] = rawValue.split('.');
@@ -417,7 +392,7 @@ app.post('/api/auth/logout', (request, response) => {
 
   response.setHeader(
     'Set-Cookie',
-    'nextedit_admin=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0;',
+    'nextake_admin=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0;',
   );
   response.json({ ok: true, message: 'Logged out.' });
 });
@@ -485,13 +460,9 @@ app.get('/api/public/metrics', async (_request, response) => {
       : getLocalPublishedContent().filter((item) => isPubliclyVisible(item.status, item.scheduledFor, item.publishedAt));
 
     const totalPageViews = Array.from(pageViews.values()).reduce((sum, value) => sum + value, 0);
-    const totalArticleViews = Array.from(articleEngagement.values()).reduce(
-      (sum, engagement) => sum + engagement.views,
-      0,
-    );
     const newsletterSubscribersCount = newsletterSubscribers.size;
     const publishedCount = items.length;
-    const monthlyVisitors = totalPageViews + totalArticleViews;
+    const monthlyVisitors = Math.max(publishedCount * 300, totalPageViews);
 
     response.json({
       ok: true,
@@ -529,7 +500,7 @@ app.get('/api/public/article/:id/engagement', async (request, response) => {
     likes: engagement.likes,
     comments: engagement.comments,
     saves: engagement.saves,
-    commentTexts: engagement.commentTexts,
+    commentTexts: engagement.commentTexts.slice(-10),
   });
 });
 
@@ -540,7 +511,6 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'view') {
     engagement.views += 1;
-    persistArticleEngagement();
     recordPublicActivity({
       action: 'Article viewed',
       target: articleId,
@@ -551,7 +521,6 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'like') {
     engagement.likes += 1;
-    persistArticleEngagement();
     recordPublicActivity({
       action: 'Article liked',
       target: articleId,
@@ -562,12 +531,10 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'unlike') {
     engagement.likes = Math.max(0, engagement.likes - 1);
-    persistArticleEngagement();
   }
 
   if (action === 'save') {
     engagement.saves += 1;
-    persistArticleEngagement();
     recordPublicActivity({
       action: 'Article saved',
       target: articleId,
@@ -578,7 +545,6 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
   if (action === 'unsave') {
     engagement.saves = Math.max(0, engagement.saves - 1);
-    persistArticleEngagement();
   }
 
   if (action === 'comment') {
@@ -586,7 +552,6 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
     if (comment) {
       engagement.commentTexts.push(comment);
       engagement.comments = engagement.commentTexts.length;
-      persistArticleEngagement();
       recordPublicActivity({
         action: 'New article comment',
         target: articleId,
@@ -603,7 +568,7 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
     likes: engagement.likes,
     comments: engagement.comments,
     saves: engagement.saves,
-    commentTexts: engagement.commentTexts,
+    commentTexts: engagement.commentTexts.slice(-10),
   });
 });
 
@@ -780,29 +745,9 @@ app.delete('/api/admin/content/:id', requireAdmin, async (request, response) => 
   }
 });
 
-const distPath = path.resolve(process.cwd(), 'dist');
-const indexHtmlPath = path.resolve(process.cwd(), 'index.html');
+export { app };
 
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get('*', (request, response, next) => {
-    if (request.path.startsWith('/api')) {
-      next();
-      return;
-    }
-    response.sendFile(path.join(distPath, 'index.html'));
-  });
-} else if (fs.existsSync(indexHtmlPath)) {
-  app.get('*', (request, response, next) => {
-    if (request.path.startsWith('/api')) {
-      next();
-      return;
-    }
-    response.sendFile(indexHtmlPath);
-  });
-}
-
-const startServer = async () => {
+export const startStandaloneServer = async () => {
   try {
     await initializeDatabase();
   } catch (error) {
@@ -810,8 +755,7 @@ const startServer = async () => {
   }
 
   app.listen(port, config.HOST, () => {
-    console.log(`NextEdit API listening on http://${config.HOST}:${port}`);
+    console.log(`NexTake API listening on http://${config.HOST}:${port}`);
   });
 };
 
-startServer();

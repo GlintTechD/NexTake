@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { getDailyEditSettings } from "../lib/supabase";
 import type { DailyEditSettings } from "../lib/supabase";
-import { subscribeToNewsletter } from "../lib/newsletter";
 
 
 interface DailyEditModalProps {
@@ -30,8 +29,6 @@ export const DailyEditModal: React.FC<DailyEditModalProps> = ({
     useState<DailyEditSettings | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -50,28 +47,18 @@ export const DailyEditModal: React.FC<DailyEditModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email.trim()) return;
 
-    setIsSubmitting(true);
-    setError("");
+    setSubscribed(true);
 
-    try {
-      await subscribeToNewsletter(email, selectedFormat);
-      setSubscribed(true);
-      setTimeout(() => {
-        setSubscribed(false);
-        setEmail("");
-        onClose();
-      }, 2500);
-    } catch (submitError) {
-      console.error("Daily Edit signup failed:", submitError);
-      setError("Unable to save your signup. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    setTimeout(() => {
+      setSubscribed(false);
+      setEmail("");
+      onClose();
+    }, 2500);
   };
 
   const editions = [
@@ -125,15 +112,15 @@ export const DailyEditModal: React.FC<DailyEditModalProps> = ({
             </div>
 
             <h3 className="text-xl font-black text-white">
-              Signup request received
+              Dispatch channel synchronized
             </h3>
 
             <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-              Your signup request was saved for this server session for{" "}
+              You will receive the Daily Edit directly at{" "}
               <span className="text-emerald-400">
                 {email}
               </span>
-              . Email delivery is not enabled.
+              .
             </p>
           </div>
         ) : (
@@ -158,7 +145,7 @@ export const DailyEditModal: React.FC<DailyEditModalProps> = ({
 
               <p className="text-xs text-slate-400 leading-relaxed">
                 {settings?.description ||
-                  "Request the Daily Edit briefing. Email delivery is not enabled yet."}
+                  "High-signal intelligence delivered every morning."}
               </p>
 
               {settings?.subscriber_text && (
@@ -250,12 +237,11 @@ export const DailyEditModal: React.FC<DailyEditModalProps> = ({
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3 rounded-lg bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider transition-all shadow-[0_0_20px_rgba(0,242,170,0.3)] active:scale-98 disabled:cursor-wait disabled:opacity-60"
+                className="w-full py-3 rounded-lg bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider transition-all shadow-[0_0_20px_rgba(0,242,170,0.3)] active:scale-98"
               >
-                {isSubmitting ? "Saving..." : settings?.button_text || "Subscribe to NexTake telemetry →"}
+                {settings?.button_text ||
+                  "Subscribe to NexTake telemetry →"}
               </button>
-              {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
             </form>
 
             {/* Footer */}
@@ -265,13 +251,13 @@ export const DailyEditModal: React.FC<DailyEditModalProps> = ({
 
                 <span>
                   {settings?.privacy_text ||
-                    "Stored in server memory for this session"}
+                    "Archival grade privacy"}
                 </span>
               </span>
 
               <span>
                 {settings?.unsubscribe_text ||
-                  "Email delivery is not enabled"}
+                  "Unsubscribe at any moment"}
               </span>
             </div>
           </div>

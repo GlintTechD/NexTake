@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { ScreenView, SearchResultItem } from '../types';
-import { subscribeToNewsletter } from '../lib/newsletter';
 import {
   ALL_EXPLORE_ITEMS,
   DOMAIN_TOPICS,
@@ -21,42 +20,12 @@ import {
   Building2,
 } from 'lucide-react';
 
-type DateRange = '30d' | '24h' | '7d' | 'all';
-type ResultSort = 'relevance' | 'newest' | 'most-read';
-
-const getAgeInMinutes = (timeAgo?: string): number | null => {
-  const match = timeAgo?.match(/(\d+)\s*(m|min(?:ute)?s?|h|hours?|d|days?|w|weeks?|y|years?)\s+ago/i);
-  if (!match) return null;
-
-  const amount = Number(match[1]);
-  const unit = match[2].toLowerCase();
-  if (unit.startsWith('m')) return amount;
-  if (unit.startsWith('h')) return amount * 60;
-  if (unit.startsWith('d')) return amount * 60 * 24;
-  if (unit.startsWith('w')) return amount * 60 * 24 * 7;
-  return amount * 60 * 24 * 365;
-};
-
-const getViewCount = (views?: string): number => {
-  const match = views?.match(/([\d,.]+)\s*([kmb])?/i);
-  if (!match) return 0;
-
-  const multiplier = match[2]?.toLowerCase() === 'm'
-    ? 1_000_000
-    : match[2]?.toLowerCase() === 'k'
-      ? 1_000
-      : match[2]?.toLowerCase() === 'b'
-        ? 1_000_000_000
-        : 1;
-
-  return Number(match[1].replace(/,/g, '')) * multiplier;
-};
-
 interface ExploreViewProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
   savedIds: string[];
   onToggleSave: (id: string) => void;
   initialQuery?: string;
+  onOpenDailyEdit: () => void;
 }
 
 export const ExploreView: React.FC<ExploreViewProps> = ({
@@ -64,6 +33,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   savedIds,
   onToggleSave,
   initialQuery = 'FINTECH',
+  onOpenDailyEdit: _onOpenDailyEdit,
 }) => {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [activeFilterTab, setActiveFilterTab] = useState('ALL');
@@ -72,28 +42,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   });
   const [followedOrgs, setFollowedOrgs] = useState<Record<string, boolean>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [dateRange, setDateRange] = useState<DateRange>('30d');
-  const [resultSort, setResultSort] = useState<ResultSort>('relevance');
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterStatus, setNewsletterStatus] = useState<'success' | 'error' | null>(null);
-  const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
-
-  const handleNewsletterSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsNewsletterSubmitting(true);
-    setNewsletterStatus(null);
-
-    try {
-      await subscribeToNewsletter(newsletterEmail);
-      setNewsletterEmail('');
-      setNewsletterStatus('success');
-    } catch (error) {
-      console.error('Explore newsletter subscribe failed:', error);
-      setNewsletterStatus('error');
-    } finally {
-      setIsNewsletterSubmitting(false);
-    }
-  };
 
   const trendingQueries = [
     'AI Agents',
@@ -144,31 +92,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     'VIDEOS & SHORTS': queryFiltered.filter((i) => i.type === 'short' || i.type === 'interview').length,
   }), [queryFiltered]);
 
-  const dateRangeMinutes: Record<Exclude<DateRange, 'all'>, number> = {
-    '24h': 60 * 24,
-    '7d': 60 * 24 * 7,
-    '30d': 60 * 24 * 30,
-  };
-  const visibleResults = filteredResults
-    .filter((item) => {
-      if (dateRange === 'all') return true;
-      const age = getAgeInMinutes(item.timeAgo);
-      return age === null || age <= dateRangeMinutes[dateRange];
-    })
-    .sort((first, second) => {
-      if (resultSort === 'newest') {
-        return (getAgeInMinutes(first.timeAgo) ?? Infinity)
-          - (getAgeInMinutes(second.timeAgo) ?? Infinity);
-      }
-      if (resultSort === 'most-read') {
-        return getViewCount(second.views) - getViewCount(first.views);
-      }
-      return 0;
-    });
-
   // Top result: first story with a badge or thumbnail
-  const topResult = visibleResults.find((i) => i.type === 'story' && (i.badge || i.thumbnail));
-  const gridItems = visibleResults.filter((i) => i !== topResult);
+  const topResult = filteredResults.find((i) => i.type === 'story' && (i.badge || i.thumbnail));
+  const gridItems = filteredResults.filter((i) => i !== topResult);
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
@@ -176,11 +102,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       <section className="bg-white border-b border-slate-200 pt-10 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-4">
-            <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
-              05 • Discovery & knowledge graph
-            </span>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950 mt-1">
-              Explore Next Edit
+              Explore NexTake
             </h1>
             <p className="text-sm text-slate-500 max-w-2xl mt-1 leading-relaxed">
               Search 14,000+ technology dispatches, founder interviews, 60-second shorts, people archives, and sovereign company intelligence.
@@ -196,10 +119,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search across articles, founders, institutions, or ticker codes..."
-                className="w-full pl-12 pr-28 py-3.5 rounded-lg border border-slate-300 bg-white font-mono text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 shadow-sm"
+                className="w-full pl-12 pr-12 py-3.5 rounded-lg border border-slate-300 bg-white font-mono text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 shadow-sm"
               />
-              <div className="absolute right-3 flex items-center space-x-2">
-                {searchQuery && (
+              {searchQuery && (
+                <div className="absolute right-3 flex items-center">
                   <button
                     onClick={() => setSearchQuery('')}
                     className="p-1 text-slate-400 hover:text-slate-600 rounded"
@@ -207,11 +130,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   >
                     <X className="w-4 h-4" />
                   </button>
-                )}
-                <span className="text-[11px] font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                  20K / /
-                </span>
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -241,17 +161,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-2 font-mono">
           <div>
-            <span className="text-[10px] font-bold text-slate-400 tracking-wider block">
-              Query synchronized
-            </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-950">
               Results for "{searchQuery || 'All'}"
             </h2>
-          </div>
-
-          <div className="flex items-center space-x-2 text-xs text-slate-500">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            <span>{tabCounts.ALL} Results across 5 taxonomies (0.04s)</span>
           </div>
         </div>
 
@@ -281,28 +193,18 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           </div>
 
           {/* Sorters and View Mode */}
-          <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-            <select
-              aria-label="Filter results by date"
-              value={dateRange}
-              onChange={(event) => setDateRange(event.target.value as DateRange)}
-              className="w-full min-w-0 rounded border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:outline-none sm:w-auto"
-            >
-              <option value="30d">Date: Past 30 Days</option>
-              <option value="24h">Past 24 Hours</option>
-              <option value="7d">Past 7 Days</option>
-              <option value="all">All Time</option>
+          <div className="flex items-center space-x-3">
+            <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none">
+              <option>Date: Past 30 Days</option>
+              <option>Past 24 Hours</option>
+              <option>Past 7 Days</option>
+              <option>All Time</option>
             </select>
 
-            <select
-              aria-label="Sort search results"
-              value={resultSort}
-              onChange={(event) => setResultSort(event.target.value as ResultSort)}
-              className="w-full min-w-0 rounded border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:outline-none sm:w-auto"
-            >
-              <option value="relevance">Sort: Most Relevant</option>
-              <option value="newest">Newest First</option>
-              <option value="most-read">Most Read</option>
+            <select className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none">
+              <option>Sort: Most Relevant</option>
+              <option>Newest First</option>
+              <option>Most Read</option>
             </select>
 
             <div className="hidden sm:flex items-center space-x-1 border border-slate-200 bg-white rounded p-0.5">
@@ -332,14 +234,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                 <div className="lg:col-span-8 space-y-3">
-                  <div className="text-xs font-mono text-slate-400">
-                    {topResult.badge && (
-                      <span className="text-emerald-700 font-bold">{topResult.badge}</span>
-                    )}
-                    <span className="mx-2">•</span>
-                    <span>{topResult.category}</span>
-                  </div>
-
                   <h3
                     onClick={() => onNavigate('article', topResult.articleId)}
                     className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors cursor-pointer leading-tight"
@@ -389,9 +283,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                       alt={topResult.title}
                       className="w-full h-full object-cover opacity-80"
                     />
-                    <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-emerald-400 text-slate-950 px-2 py-0.5 rounded font-bold">
-                      Telemetry: Verified
-                    </span>
                   </div>
                 </div>
               </div>
@@ -433,11 +324,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                           <span className="text-slate-700 font-bold truncate mr-2">{item.category}</span>
                           {item.timeAgo && <span className="shrink-0">{item.timeAgo}</span>}
                         </div>
-                        {item.badge && (
-                          <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold border border-emerald-200 mb-2 inline-block">
-                            {item.badge}
-                          </span>
-                        )}
                         <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
                           {item.title}
                         </h3>
@@ -464,11 +350,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                           <div className="w-8 h-8 rounded bg-slate-950 text-white font-mono font-bold text-xs flex items-center justify-center">
                             {initials}
                           </div>
-                          {item.badge && (
-                            <span className="text-[10px] font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                              {item.badge}
-                            </span>
-                          )}
                         </div>
                         <h3 className="text-base font-bold text-slate-950 mb-1">{item.title}</h3>
                         <p className="text-[11px] font-mono text-slate-500 mb-3">{item.category}</p>
@@ -516,9 +397,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                           </span>
                           <span className="text-slate-400">{item.duration}</span>
                         </div>
-                        {item.badge && (
-                          <div className="text-[10px] font-mono text-emerald-400 font-bold mb-1">{item.badge}</div>
-                        )}
                         <h3 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors mb-2">
                           {item.title}
                         </h3>
@@ -538,11 +416,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   return (
                     <div key={item.id} className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between">
                       <div>
-                        {item.badge && (
-                          <span className="text-[10px] font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 mb-3 inline-block">
-                            {item.badge}
-                          </span>
-                        )}
                         <div className="flex items-center space-x-3 mb-3">
                           {operatorData?.avatar ? (
                             <img
@@ -756,53 +629,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* 6. Newsletter Banner (matching 2.png) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="bg-[#090d14] text-white rounded-xl p-8 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-1">
-            <span className="text-[11px] font-mono text-emerald-400 font-bold">
-              • The Daily Edit Wire
-            </span>
-            <h2 className="text-2xl font-black">
-              Stay ahead of what's next.
-            </h2>
-            <p className="text-xs text-slate-400">
-              Request the Daily Edit briefing. Signup requests stay in server memory for the current session; email delivery is not enabled yet.
-            </p>
-          </div>
-
-          <form onSubmit={handleNewsletterSubmit} className="w-full min-w-0 md:w-auto">
-            <input
-              type="email"
-              aria-label="Email address"
-              autoComplete="email"
-              required
-              value={newsletterEmail}
-              onChange={(event) => setNewsletterEmail(event.target.value)}
-              placeholder="corporate.email@domain.com"
-              className="mb-2 w-full min-w-0 rounded border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 md:mb-0 md:w-56"
-            />
-            <button
-              type="submit"
-              disabled={isNewsletterSubmitting}
-              className="w-full shrink-0 rounded bg-[#00f2aa] px-4 py-2 text-slate-950 font-mono font-bold text-xs tracking-wider hover:bg-[#00df9c] transition-colors disabled:cursor-wait disabled:opacity-60 md:w-auto"
-            >
-              {isNewsletterSubmitting ? 'Saving...' : 'Subscribe'}
-            </button>
-            {newsletterStatus && (
-              <p
-                role={newsletterStatus === 'error' ? 'alert' : 'status'}
-                className={`mt-2 text-xs ${newsletterStatus === 'error' ? 'text-red-300' : 'text-emerald-300'}`}
-              >
-                {newsletterStatus === 'success'
-                  ? 'Request saved for this server session. Email delivery is not enabled yet.'
-                  : 'Unable to save your signup. Please try again.'}
-              </p>
-            )}
-          </form>
         </div>
       </section>
     </div>

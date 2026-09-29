@@ -19,7 +19,7 @@ import {
   X,
   Send,
   Check,
-  Sparkles,
+  Bookmark,
   ExternalLink,
   Sliders,
   Radio,
@@ -824,7 +824,7 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
                     className="w-full p-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-left flex items-center justify-between text-slate-200"
                   >
                     <span>{savedIds.includes(currentShort.id) ? 'Remove from Saved' : 'Save to Your Edit'}</span>
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <Bookmark className="w-4 h-4 text-emerald-400" />
                   </button>
 
                   <button

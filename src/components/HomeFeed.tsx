@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenView } from '../types';
-import { subscribeToNewsletter } from '../lib/newsletter';
 import { HeroSlideshow } from './HeroSlideshow';
+import { PromoRotatorBanner } from './PromoRotatorBanner';
 import {
   FEATURED_ARTICLE,
-  SHORTS_LIST,
   FEATURED_INTERVIEW,
   BIG_STORY,
   LATEST_DISPATCHES,
@@ -110,6 +109,7 @@ interface HomeFeedProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
   savedIds: string[];
   onToggleSave: (id: string) => void;
+  onOpenDailyEdit: () => void;
   onOpenContact?: () => void;
 }
 
@@ -117,6 +117,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   onNavigate,
   savedIds,
   onToggleSave,
+  onOpenDailyEdit,
   onOpenContact,
 }) => {
 
@@ -137,28 +138,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     'op-patrick': true,
   });
   const [followedCompanies, setFollowedCompanies] = useState<Record<string, boolean>>({});
-  const [tickerIndex, setTickerIndex] = useState(0);
   const [emailInput, setEmailInput] = useState('');
   const [emailSubscribed, setEmailSubscribed] = useState(false);
-  const [emailError, setEmailError] = useState('');
-  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
   const [dailyEditItems, setDailyEditItems] = useState<DailyEditItem[]>([]);
   const [dailyEditLoading, setDailyEditLoading] = useState(true);
-
-  const tickerAlerts = [
-    '#842 Real-time protocol telemetry: Anthropic & DeepMind release architectural proofs',
-    '#841 Global hardware runtimes: TSMC commits 2nm fab access to allied silicon program',
-    '#840 SWIFT runtime migration: 14 tier-one clearing houses complete latency overhaul',
-    '#839 Regulatory dispatch: EU commissions first autonomous agent auditing framework',
-  ];
-
-  // Auto-cycle top ticker
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTickerIndex((prev) => (prev + 1) % tickerAlerts.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [tickerAlerts.length]);
 
   const toggleOperatorFollow = (id: string) => {
     setFollowedOperators((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -174,20 +157,25 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     e.preventDefault();
     if (!emailInput.trim()) return;
 
-    setIsEmailSubmitting(true);
-    setEmailError('');
-
     try {
-      await subscribeToNewsletter(emailInput);
+      const response = await fetch('/api/public/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: emailInput, frequency: 'daily' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to save subscription.');
+      }
+
       setEmailSubscribed(true);
       setTimeout(() => setEmailSubscribed(false), 4000);
       setEmailInput('');
     } catch (error) {
       console.error('Home newsletter subscribe failed:', error);
       setEmailSubscribed(false);
-      setEmailError('Unable to save your signup. Please try again.');
-    } finally {
-      setIsEmailSubmitting(false);
     }
   };
   useEffect(() => {
@@ -290,178 +278,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
-      {/* 1. Top Real-Time Trending Ticker */}
-      <div className="bg-[#0b1017] text-white border-b border-[#1a2330] py-2 px-4 sm:px-8 text-xs font-mono">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3 truncate">
-            <span className="flex items-center space-x-2 text-emerald-400 font-bold shrink-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span style={{ fontFamily: 'Georgia, serif' }}>• Trending:</span>
-            </span>
-            <span
-              style={{ fontFamily: 'Arial, sans-serif' }}
-              className="text-slate-300 truncate font-['Arial',sans-serif]"
-            >
-              {tickerAlerts[tickerIndex]}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Interactive Editorial Hero Slideshow with connected Story Sidebar */}
-      <HeroSlideshow
-        onNavigate={onNavigate}
-        savedIds={savedIds}
-        onToggleSave={onToggleSave}
-      />
-
-      {/* 3. YOUR DAILY EDIT - 5 things worth knowing today */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-b border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-slate-200 gap-2">
-          <div>
-            <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
-              Curated telemetry
-            </span>
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">
-              Your Daily Edit
-            </h2>
-            <p className="text-xs text-slate-500">5 things worth knowing today.</p>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-mono bg-white text-slate-700 border border-slate-200 shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="font-semibold text-slate-800">4 new dispatches since your last visit</span>
-              <span className="text-slate-500">(Today 08:30 AM)</span>
-            </span>
-          </div>
-        </div>
-
-        {/* 5 Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {dailyEditLoading ? (
-            <div className="col-span-full py-10 text-center">
-              <p className="text-xs font-mono text-slate-400">
-                Loading today's editorial...
-              </p>
-            </div>
-          ) : dailyEditItems.length === 0 ? (
-            <div className="col-span-full py-10 text-center">
-              <p className="text-xs font-mono text-slate-400">
-                No published editorial stories available.
-              </p>
-            </div>
-          ) : (
-            dailyEditItems.map((item) => (
-              <div
-                key={item.id}
-
-                className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
-              >
-                <div>
-                  <div className="flex items-center justify-between text-xs font-mono mb-2">
-                    <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
-                      {item.num}
-                    </span>
-
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-                      {item.tag}
-                    </span>
-                  </div>
-
-                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
-                    {item.title}
-                  </h3>
-
-                  <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
-                  <span>{item.timeAgo}</span>
-                  <span>{item.readTime}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* 4. NEXT EDIT SHORTS - Tech stories in under 60 seconds (matching 6.png) */}
-      <section className="bg-[#090d14] text-white py-12 border-b border-[#1b2533]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
-            <div>
-              <h2 className="text-2xl font-black tracking-tight text-white">
-                Next Edit Shorts
-              </h2>
-              <p className="text-xs text-slate-400 font-mono">
-                Tech stories in under 60 seconds.
-              </p>
-            </div>
-
-            <button
-              onClick={() => onNavigate('shorts')}
-              className="inline-flex items-center space-x-1.5 text-xs font-mono font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
-            >
-              <span>See all shorts</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* 5 Vertical Preview Reels */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {SHORTS_LIST.map((short) => (
-              <div
-                key={short.id}
-                onClick={() => onNavigate('shorts')}
-                className="group relative rounded-lg overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/60 transition-all cursor-pointer aspect-[9/14] flex flex-col justify-between p-3"
-              >
-                <img
-                  src={short.thumbnail}
-                  alt={short.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-
-                {/* Top Badge */}
-                <div className="relative z-10 flex items-center justify-between text-[10px] font-mono">
-                  <span className="px-1.5 py-0.5 rounded bg-black/70 text-emerald-400 border border-emerald-500/30">
-                    {short.category}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded bg-black/70 text-slate-300">
-                    {short.duration.split(' ')[0]}
-                  </span>
-                </div>
-
-                {/* Center Hover Play Icon */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <div className="w-12 h-12 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 transform scale-90 group-hover:scale-100 transition-transform">
-                    <Play className="w-5 h-5 fill-current ml-0.5" />
-                  </div>
-                </div>
-
-                {/* Bottom Content */}
-                <div className="relative z-10">
-                  <h3 className="text-xs font-bold text-white line-clamp-2 leading-snug group-hover:text-emerald-300 transition-colors mb-2">
-                    {short.title}
-                  </h3>
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                    <span>{short.author}</span>
-                    <span className="text-emerald-400 font-bold">{short.views}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* 5. THE BIG STORY (matching 6.png) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-slate-200">
+      <section
+        style={{ height: '250px' }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 border-b border-slate-200 h-[250px] overflow-hidden"
+      >
         <div className="mb-6">
           <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
             Deep focus • Brief
@@ -513,19 +334,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                       <span>{takeaway.num}</span>
                       <span>{takeaway.label}</span>
                     </div>
-                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-4">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
                       {takeaway.text}
                     </p>
-                    {takeaway.text.length > 150 && (
-                      <button
-                        type="button"
-                        onClick={() => onNavigate('article', activeBigStory.id)}
-                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
-                      >
-                        <span>Read more</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
@@ -1049,7 +860,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             </h2>
 
             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                      Request the Daily Edit briefing. Signup requests stay in server memory for the current session; email delivery is not enabled yet.
+              Get the most important technology stories, insights, and updates delivered to your inbox every morning at 07:00 UTC.
             </p>
 
             <form onSubmit={handleEmailSubmit} className="pt-2 flex flex-col sm:flex-row gap-3">
@@ -1063,16 +874,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               />
               <button
                 type="submit"
-                disabled={isEmailSubmitting}
-                className="px-6 py-3 rounded bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider transition-colors shrink-0 disabled:cursor-wait disabled:opacity-60"
+                className="px-6 py-3 rounded bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider transition-colors shrink-0"
               >
-                {isEmailSubmitting ? 'Saving...' : emailSubscribed ? 'Request received' : 'Get the Daily Edit →'}
+                {emailSubscribed ? 'Synchronized ✓' : 'Get the Daily Edit →'}
               </button>
             </form>
-            {emailError && <p role="alert" className="pt-2 text-xs text-red-300">{emailError}</p>}
 
             <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 pt-2 gap-3">
-              <span>Signup requests are stored for this server session only.</span>
+              <span>Zero spam • Unsubscribe anytime. Strict data protocol.</span>
               <div className="flex items-center space-x-3">
                 <button
                   type="button"

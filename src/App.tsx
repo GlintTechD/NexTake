@@ -1,50 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenView } from './types';
 import { Navbar } from './components/Navbar';
+import { TrendingTicker } from './components/TrendingTicker';
 import { HomeFeed } from './components/HomeFeed';
 import { ArticleView } from './components/ArticleView';
-import { CommentsView } from './components/CommentsView';
 import { ExploreView } from './components/ExploreView';
 import { ShortsStage } from './components/ShortsStage';
 import { InterviewView } from './components/InterviewView';
+import { StartupsView } from './components/StartupsView';
+import { StartupArticleView } from './components/StartupArticleView';
 import { Footer } from './components/Footer';
 import { SavedStoriesDrawer } from './components/SavedStoriesDrawer';
 import { DailyEditModal } from './components/DailyEditModal';
 import { ContactModal } from './components/ContactModal';
 import { PostingsPortal } from './components/PostingsPortal';
-import { StartupsView } from './components/StartupsView';
-
-const getInitialRoute = (): { screen: ScreenView; articleId: string } => {
-  if (typeof window === 'undefined') {
-    return { screen: 'home', articleId: 'dispatch-842' };
-  }
-
-  const path = window.location.pathname;
-  if (path.startsWith('/article/') && path.endsWith('/comments')) {
-    const articleId = decodeURIComponent(path.slice('/article/'.length, -'/comments'.length));
-    return {
-      screen: articleId ? 'comments' : 'home',
-      articleId: articleId || 'dispatch-842',
-    };
-  }
-  if (path.startsWith('/article/')) {
-    const articleId = decodeURIComponent(path.slice('/article/'.length));
-    return {
-      screen: articleId ? 'article' : 'home',
-      articleId: articleId || 'dispatch-842',
-    };
-  }
-  if (path === '/explore') return { screen: 'explore', articleId: 'dispatch-842' };
-  if (path === '/shorts') return { screen: 'shorts', articleId: 'dispatch-842' };
-  if (path === '/interview') return { screen: 'interview', articleId: 'dispatch-842' };
-  if (path === '/startups') return { screen: 'startups', articleId: 'dispatch-842' };
-  return { screen: 'home', articleId: 'dispatch-842' };
-};
 
 export default function App() {
-  const initialRoute = getInitialRoute();
-  const [currentScreen, setCurrentScreen] = useState<ScreenView>(initialRoute.screen);
-  const [selectedArticleId, setSelectedArticleId] = useState<string>(initialRoute.articleId);
+  const [currentScreen, setCurrentScreen] = useState<ScreenView>('home');
+  const [selectedArticleId, setSelectedArticleId] = useState<string>('dispatch-842');
+  const [selectedStartupId, setSelectedStartupId] = useState<string>('paystack');
 
   const syncCurrentScreenFromPath = () => {
     const path = window.location.pathname;
@@ -52,17 +26,19 @@ export default function App() {
       return;
     }
     if (path.startsWith('/article/')) {
-      if (path.endsWith('/comments')) {
-        const articleId = decodeURIComponent(path.slice('/article/'.length, -'/comments'.length));
-        if (articleId) setSelectedArticleId(articleId);
-        setCurrentScreen('comments');
-        return;
-      }
       const articleId = decodeURIComponent(path.slice('/article/'.length));
       if (articleId) {
         setSelectedArticleId(articleId);
       }
       setCurrentScreen('article');
+      return;
+    }
+    if (path.startsWith('/startup/')) {
+      const startupId = decodeURIComponent(path.slice('/startup/'.length));
+      if (startupId) {
+        setSelectedStartupId(startupId);
+      }
+      setCurrentScreen('startup-article');
       return;
     }
     if (path === '/explore') {
@@ -73,17 +49,15 @@ export default function App() {
       setCurrentScreen('shorts');
       return;
     }
-if (path === '/interview') {
-  setCurrentScreen('interview');
-  return;
-}
-
-if (path === '/startups') {
-  setCurrentScreen('startups');
-  return;
-}
-
-setCurrentScreen('home');
+    if (path === '/interview') {
+      setCurrentScreen('interview');
+      return;
+    }
+    if (path === '/startups') {
+      setCurrentScreen('startups');
+      return;
+    }
+    setCurrentScreen('home');
   };
 
   useEffect(() => {
@@ -108,7 +82,6 @@ setCurrentScreen('home');
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        window.history.pushState({}, '', '/explore');
         setCurrentScreen('explore');
       }
     };
@@ -134,16 +107,17 @@ setCurrentScreen('home');
       window.history.pushState({}, '', '/shorts');
     } else if (screen === 'interview') {
       window.history.pushState({}, '', '/interview');
+    } else if (screen === 'startups') {
+      window.history.pushState({}, '', '/startups');
+    } else if (screen === 'startup-article') {
+      const startupId = param ?? selectedStartupId;
+      setSelectedStartupId(startupId);
+      window.history.pushState({}, '', `/startup/${startupId}`);
     } else if (screen === 'article') {
       const articleId = param ?? selectedArticleId;
       window.history.pushState({}, '', `/article/${articleId}`);
-    } else if (screen === 'comments') {
-      const articleId = param ?? selectedArticleId;
-      window.history.pushState({}, '', `/article/${articleId}/comments`);
     } else if (screen === 'postings') {
       window.history.pushState({}, '', '/postings');
-    } else if (screen === 'startups') {
-      window.history.pushState({}, '', '/startups');
     }
 
     setCurrentScreen(screen);
@@ -166,6 +140,9 @@ setCurrentScreen('home');
 
   return (
     <div className="min-h-screen bg-[#fafbfc] text-slate-900 flex flex-col font-sans selection:bg-emerald-400 selection:text-slate-950">
+      {/* 1. Real-Time Trending Ticker - Above the Header */}
+      <TrendingTicker />
+
       {/* Top Main Navbar (visible across screens, shorts has custom header or full screen) */}
       {currentScreen !== 'shorts' && (
         <Navbar
@@ -185,6 +162,7 @@ setCurrentScreen('home');
             onNavigate={handleNavigate}
             savedIds={savedIds}
             onToggleSave={handleToggleSave}
+            onOpenDailyEdit={() => setIsDailyEditOpen(true)}
             onOpenContact={() => setIsContactOpen(true)}
           />
         )}
@@ -198,26 +176,20 @@ setCurrentScreen('home');
           />
         )}
 
-        {currentScreen === 'comments' && (
-          <CommentsView
-            onNavigate={handleNavigate}
-            articleId={selectedArticleId}
-          />
-        )}
-
         {currentScreen === 'explore' && (
           <ExploreView
             onNavigate={handleNavigate}
             savedIds={savedIds}
             onToggleSave={handleToggleSave}
             initialQuery={exploreQuery}
+            onOpenDailyEdit={() => setIsDailyEditOpen(true)}
           />
         )}
 
         {currentScreen === 'shorts' && (
           <ShortsStage
             onNavigate={handleNavigate}
-            onClose={() => handleNavigate('home')}
+            onClose={() => setCurrentScreen('home')}
             savedIds={savedIds}
             onToggleSave={handleToggleSave}
           />
@@ -230,14 +202,24 @@ setCurrentScreen('home');
             onToggleSave={handleToggleSave}
           />
         )}
+
         {currentScreen === 'startups' && (
-  <StartupsView
-    onNavigate={handleNavigate}
-    savedIds={savedIds}
-    onToggleSave={handleToggleSave}
-    onOpenContact={() => setIsContactOpen(true)}
-  />
-)}
+          <StartupsView
+            onNavigate={handleNavigate}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
+            onOpenContact={() => setIsContactOpen(true)}
+          />
+        )}
+
+        {currentScreen === 'startup-article' && (
+          <StartupArticleView
+            onNavigate={handleNavigate}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
+            startupId={selectedStartupId}
+          />
+        )}
       </main>
 
       {/* Global Footer (shown on all screens except shorts stage) */}

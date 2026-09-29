@@ -1,11 +1,4 @@
-export type ScreenView =
-  | 'home'
-  | 'article'
-  | 'comments'
-  | 'explore'
-  | 'shorts'
-  | 'interview'
-  | 'startups';
+export type ScreenView = 'home' | 'article' | 'explore' | 'shorts' | 'interview' | 'startups' | 'startup-article';
 
 export interface HeroSlideStory {
   id: string;
@@ -190,4 +183,265 @@ export interface SearchResultItem {
   duration?: string;
   articleId?: string;
   tags?: string[];
+}
+
+export interface Startup {
+  id: string;
+  name: string;
+  ticker: string;
+  tagline: string;
+  category: string;
+  stage: string;
+  hq: string;
+  founded: string;
+  valuation: string;
+  totalRaised: string;
+  arr: string;
+  growthYoY: string;
+  burnMultiple: string;
+  runway: string;
+  nrr: string;
+  unicornProbability: number;
+  investmentScore: 'AAA' | 'AA+' | 'AA' | 'A+';
+  isTrending: boolean;
+  isLikelyToUnicorn: boolean;
+  isLikelyToInvest: boolean;
+  founders: {
+    name: string;
+    role: string;
+    pedigree: string;
+    avatar?: string;
+  }[];
+  keyInvestors: string[];
+  thesis: string;
+  moat: string;
+  milestones: string[];
+  techStack: string[];
+  riskFactor: string;
+  marketSize: string;
+  image?: string;
+}
+
+export type InformationDisclosureStatus =
+  | 'Publicly disclosed'
+  | 'Company-reported'
+  | 'Reported by source'
+  | 'Estimated'
+  | 'Not publicly disclosed';
+
+export interface StartupProfile {
+  // 1. Startup Header
+  id: string;
+  name: string;
+  logo?: string;
+  oneLineDescription: string;
+  industry: string;
+  country: string;
+  headquarters: string;
+  foundedYear: number | string;
+  stage: string;
+  website: string;
+  featuredImage: string;
+  publishedDate: string;
+  updatedDate: string;
+  author: {
+    name: string;
+    role: string;
+    avatar: string;
+  };
+  sampleDataDisclaimer?: string;
+
+  // Editorial Article Representation
+  articleHeadline?: string;
+  articleDeck?: string;
+  readTime?: string;
+  imageCaption?: string;
+  imageCredit?: string;
+  secondaryImage?: string;
+  secondaryImageCaption?: string;
+  secondaryImageCredit?: string;
+  quote?: {
+    text: string;
+    author: string;
+    role?: string;
+  };
+  theInterestingTake?: string;
+  whatCompanyDoesSummary?: string;
+  whyThisMatters?: string;
+  relatedStories?: {
+    id: string;
+    title: string;
+    date: string;
+    image: string;
+    link?: string;
+  }[];
+
+  // 2. Investment Snapshot
+  investmentSnapshot: {
+    fundingRaised: string;
+    fundingRaisedStatus: InformationDisclosureStatus;
+    latestFundingRound: string;
+    latestRoundDate: string;
+    knownInvestors: string[];
+    businessModel: string;
+    marketsServed: string[];
+    employeeCount: string;
+    employeeCountStatus: InformationDisclosureStatus;
+    revenue: string;
+    revenueStatus: InformationDisclosureStatus;
+    valuation: string;
+    valuationStatus: InformationDisclosureStatus;
+  };
+
+  // 3. Investment Brief
+  investmentBrief: {
+    whatCompanyDoes: string;
+    problemSolved: string;
+    solution: string;
+    marketOpportunity: string;
+    growthTractionSignals: string[];
+    keyConsiderations: string[];
+  };
+
+  // 4. Company & Product
+  companyAndProduct: {
+    summary: string;
+    productsAndServices: {
+      name: string;
+      description: string;
+      tierOrCategory: string;
+    }[];
+    targetCustomers: string[];
+    howItWorksSteps: {
+      stepNumber: number;
+      title: string;
+      detail: string;
+    }[];
+    businessModel: string;
+    revenueStreams: {
+      stream: string;
+      structure: string;
+      contribution?: string;
+    }[];
+  };
+
+  // 5. Market Opportunity
+  marketOpportunity: {
+    targetMarket: string;
+    geographicMarket: string[];
+    customerSegments: string[];
+    marketSizeData: {
+      metric: string;
+      value: string;
+      source: string;
+      sourceDate: string;
+      notes?: string;
+    }[];
+    relevantMarketTrends: string[];
+    expansionOpportunities: string[];
+  };
+
+  // 6. Traction & Growth
+  tractionAndGrowth: {
+    metrics: {
+      label: string;
+      value: string;
+      timeframe: string;
+      attribution: 'Company-reported' | 'Independently reported' | 'Public regulatory filing';
+      sourceNote: string;
+    }[];
+    majorMilestones: {
+      date: string;
+      milestone: string;
+      status: InformationDisclosureStatus;
+    }[];
+    keyPartnerships: {
+      partner: string;
+      nature: string;
+      announcedDate: string;
+      source: string;
+    }[];
+    geographicFootprint: string[];
+  };
+
+  // 7. Funding History
+  fundingHistory: {
+    totalFundingDisclosed: string;
+    totalFundingStatus: InformationDisclosureStatus;
+    rounds: {
+      date: string;
+      round: string;
+      amount: string;
+      leadInvestor: string;
+      otherKnownInvestors: string[];
+      source: string;
+      status: InformationDisclosureStatus;
+    }[];
+  };
+
+  // 8. Founders & Leadership
+  foundersAndLeadership: {
+    name: string;
+    role: string;
+    background: string;
+    previousExperience: string[];
+    avatar?: string;
+  }[];
+
+  // 9. Competitive Landscape
+  competitiveLandscape: {
+    methodologyNote: string;
+    competitors: {
+      company: string;
+      productService: string;
+      targetMarket: string;
+      businessModel: string;
+      differentiation: string;
+    }[];
+  };
+
+  // 10. Technology
+  technology: {
+    coreTechnology: string;
+    aiMlCapabilities?: string;
+    proprietaryTechnology: string[];
+    intellectualProperty: string;
+    dataAdvantage: string;
+    technicalDifferentiation: string;
+    techStack: string[];
+  };
+
+  // 11. Risks & Challenges
+  risksAndChallenges: {
+    category: 'Market' | 'Competition' | 'Regulation' | 'Technology' | 'Capital Requirements' | 'Business Model' | 'Execution' | 'Geographic';
+    title: string;
+    description: string;
+    nature: 'Reported Risk' | 'Editorial Analysis';
+    mitigationObservation?: string;
+  }[];
+
+  // 12. Recent Developments
+  recentDevelopments: {
+    date: string;
+    category: 'Funding' | 'Product Launch' | 'Partnership' | 'Expansion' | 'Acquisition' | 'Major Contract' | 'Leadership' | 'Regulation';
+    headline: string;
+    summary: string;
+    source: string;
+  }[];
+
+  // 13. Investor Due-Diligence Questions
+  investorDueDiligenceQuestions: {
+    theme: 'Financial Performance' | 'Customer Acquisition & Retention' | 'Margins & Unit Economics' | 'Runway & Cash Management' | 'Customer Concentration' | 'Regulatory & Governance' | 'Technology Defensibility' | 'Competitive Position';
+    question: string;
+    context: string;
+  }[];
+
+  // 14. Sources & Information Status
+  sourcesAndAttributions: {
+    claimOrSection: string;
+    status: InformationDisclosureStatus;
+    sourceName: string;
+    publicationDate: string;
+    citationNote?: string;
+  }[];
 }

@@ -31,11 +31,11 @@ test('expired tokens are detected correctly', () => {
 
 test('builds a valid Resend sender address from a verified email', () => {
   assert.equal(
-    buildResendFromAddress('no-reply@nextedit.com', 'NextEdit Admin'),
-    'NextEdit Admin <no-reply@nextedit.com>',
+    buildResendFromAddress('no-reply@nextake.com', 'NexTake Admin'),
+    'NexTake Admin <no-reply@nextake.com>',
   );
   assert.throws(
-    () => buildResendFromAddress('not-an-email', 'NextEdit Admin'),
+    () => buildResendFromAddress('not-an-email', 'NexTake Admin'),
     /RESEND_FROM_EMAIL/i,
   );
 });

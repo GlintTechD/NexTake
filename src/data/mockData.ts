@@ -224,7 +224,7 @@ export const ARTICLE_FINTECH_RAILS: Article = {
       quote: {
         text: 'We are watching the total disintermediation of legacy correspondent banking. Commerce flows directly between sovereign nations at the speed of light.',
         author: 'Marcus Brody',
-        role: 'Fintech Research Lead, Next Edit',
+        role: 'Fintech Research Lead, NexTake',
       },
     },
   ],
@@ -725,7 +725,7 @@ export const FEATURED_INTERVIEW: Interview = {
   transcript: [
     {
       speaker: 'Elena Vance',
-      role: 'Next Edit',
+      role: 'NexTake',
       time: '18:28',
       seconds: 1108,
       text: 'Dario, looking at the Q3 deployments of Claude Code across Tier-1 infra providers, we are witnessing systems that don\'t just complete boilerplate, but design microservices from architectural prompts. Where does human review structurally exist when models begin authoring their own pull requests at 3:00 AM?',
@@ -740,7 +740,7 @@ export const FEATURED_INTERVIEW: Interview = {
     },
     {
       speaker: 'Elena Vance',
-      role: 'Next Edit',
+      role: 'NexTake',
       time: '20:35',
       seconds: 1235,
       text: 'Does that mean junior software engineering roles as we conceived them in 2021 are effectively sunsetting by the end of 2026?',

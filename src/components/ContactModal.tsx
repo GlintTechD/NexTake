@@ -78,7 +78,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
       id="contact-modal-overlay"
-      onClick={handleReset}
+      onClick={onClose}
     >
       <div
         className="relative w-full max-w-xl bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl overflow-hidden"
@@ -89,11 +89,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center space-x-2">
             <span className="font-mono text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Next Edit • Direct Desk
+              NexTake • Direct Desk
             </span>
           </div>
           <button
-            onClick={handleReset}
+            onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
             title="Close Contact Modal"
           >
@@ -110,11 +110,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               Dispatch Transmitted
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-              Thank you for reaching out to Next Edit. Your inquiry has been
+              Thank you for reaching out to NexTake. Your inquiry has been
               routed to our{" "}
               <span className="text-emerald-700 font-mono font-semibold">
                 {inquiryType === "tip"
-                  ? "editorial tips inbox"
+                  ? "secure investigative desk"
                   : inquiryType === "editorial"
                     ? "editorial board"
                     : inquiryType === "press"
@@ -259,8 +259,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               <div className="flex items-center space-x-2 text-[11px] font-mono text-emerald-800 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
                 <Shield className="w-4 h-4 shrink-0 text-emerald-600" />
                 <span>
-                  Do not send confidential material here. Submissions use our
-                  email provider and are not end-to-end encrypted.
+                  All leak dispatches are cryptographically isolated and
+                  stripped of telemetry.
                 </span>
               </div>
             )}
@@ -274,7 +274,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             {/* Actions */}
             <div className="flex items-center justify-between pt-2">
               <span className="text-[11px] font-mono text-slate-500">
-                Email submission • Response &lt; 24h
+                Encrypted submission • Response &lt; 24h
               </span>
               <button
                 type="submit"

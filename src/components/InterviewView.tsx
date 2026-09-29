@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScreenView } from '../types';
-import { ALL_INTERVIEWS, InterviewItem, InterviewChapter, InterviewComment } from '../data/interviewData';
+import { ALL_INTERVIEWS, InterviewItem, InterviewChapter, InterviewComment } from '../data/interviewsData';
 import {
   Play,
   Pause,
@@ -34,7 +34,6 @@ import {
   ChevronDown,
   ChevronUp,
   Send,
-  Sparkles,
   ArrowLeft,
   X,
   ExternalLink,
@@ -439,10 +438,6 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
                         </div>
                       )}
 
-                      {/* Episode Badge in Top Left */}
-                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-xs text-emerald-400 font-mono font-bold text-[10px] px-2 py-0.5 rounded border border-emerald-400/30">
-                        EP. #{interview.episodeNumber}
-                      </div>
                     </div>
 
                     {/* Meta Row: Avatar + Title + Channel + Views */}

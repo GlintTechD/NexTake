@@ -8,17 +8,12 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': path.resolve(import.meta.dirname, '.'),
+        '@': path.resolve(__dirname, '.'),
       },
     },
     server: {
-      port: 4100,
-      proxy: {
-        '/api': {
-          target: 'http://localhost:4101',
-          changeOrigin: true,
-        },
-      },
+      // Allow the Arena live preview proxy without accepting arbitrary hosts.
+      allowedHosts: ['.e2b.app'],
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

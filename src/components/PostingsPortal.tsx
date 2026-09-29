@@ -180,7 +180,7 @@ export const PostingsPortal: React.FC = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="mb-6">
               <div className="text-xs font-mono font-bold tracking-[0.2em] text-slate-400 uppercase">
-                NextEdit admin
+                NexTake admin
               </div>
               <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Secure posting portal</h1>
             </div>
