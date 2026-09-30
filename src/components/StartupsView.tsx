@@ -1,32 +1,26 @@
-import React, { useState, useMemo } from 'react';
-import { ScreenView, Startup } from '../types';
-import { STARTUPS_LIST, STARTUP_MARKET_INDICATORS } from '../data/startupsData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ScreenView } from '../types';
+import { STARTUP_PROFILES } from '../data/startupProfilesData';
 import {
-  Rocket,
-  TrendingUp,
-  Sparkles,
-  Flame,
-  Award,
+  Share2,
   Search,
-  Filter,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ArrowUpRight,
   Bookmark,
-  Check,
-  Shield,
-  Zap,
-  Building2,
-  DollarSign,
-  BarChart3,
-  Users,
-  Compass,
-  CheckCircle2,
-  AlertTriangle,
   X,
-  ExternalLink,
-  ChevronRight,
-  Cpu,
-  Layers,
+  Calculator,
+  Award,
+  ArrowRight,
+  Building2,
+  FileText,
 } from 'lucide-react';
+
+import startupsAgritechHero from '../components/assests/startups_agritech_hero_1790590245491.jpg';
+import solarRooftopTech from '../components/assests/solar_rooftop_tech_1790590259135.jpg';
+import fintechWealthApp from '../components/assests/fintech_wealth_app_1790590273662.jpg';
+import paystackHeroPhone from '../components/assests/paystack_hero_phone_1790603559167.jpg';
 
 interface StartupsViewProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
@@ -35,7 +29,172 @@ interface StartupsViewProps {
   onOpenContact?: () => void;
 }
 
-type TabType = 'all' | 'trending' | 'unicorn' | 'investment';
+interface EditorialStory {
+  id: string;
+  category: string;
+  title: string;
+  deck: string;
+  author: string;
+  date: string;
+  readTime: string;
+  image: string;
+  isTopStory?: boolean;
+  articleId?: string;
+  startupId?: string;
+  tag?: string;
+}
+
+const EDITORIAL_STORIES: EditorialStory[] = [
+  {
+    id: 'story-paystack-expansion',
+    category: 'Startups',
+    title: 'Paystack pushes deeper into Africa with new product suite for businesses',
+    deck: 'The Nigerian fintech company is expanding its product offering to help businesses across Africa accept payments, manage operations and grow more efficiently.',
+    author: 'Next Take',
+    date: '28 Sep 2026',
+    readTime: '6 min read',
+    image: paystackHeroPhone,
+    isTopStory: true,
+    articleId: 'dispatch-fintech-rails',
+    startupId: 'paystack',
+    tag: 'FEATURED VENTURE',
+  },
+  {
+    id: 'story-ile-ayaba',
+    category: 'Agritech',
+    title: 'How Ilé Ayaba Is Digitizing Smallholder Farm Yields & Post-Harvest Cold Chains',
+    deck: "From decentralized solar grain storage to automated institutional buyer routing, the Oyo-based agritech venture is turning smallholder harvest losses into predictable trade surpluses for 12,000 rural farmers.",
+    author: 'Damilola Aina',
+    date: '24th Sep 2026',
+    readTime: '6 min read',
+    image: startupsAgritechHero,
+    isTopStory: false,
+    articleId: 'dispatch-842',
+    startupId: 'ile-ayaba',
+    tag: 'TOP STORY',
+  },
+  {
+    id: 'story-acumen-sun-king',
+    category: 'Startups',
+    title: 'Acumen Backs Sun King With $5 Million To Expand Solar Access In Zambia',
+    deck: 'The climate debt facility unlocks commercial distributed minigrids and pay-as-you-go residential solar kits across rural copperbelt agricultural districts.',
+    author: 'John Adoyi',
+    date: '23rd Sep 2026',
+    readTime: '4 min read',
+    image: solarRooftopTech,
+    articleId: 'dispatch-842',
+    startupId: 'sun-king',
+  },
+  {
+    id: 'story-rank-yc',
+    category: 'FinTech',
+    title: 'Nigeria’s Savers Have Money. YC-Backed Rank Wants To Turn It Into Wealth.',
+    deck: 'High local inflation led 240,000 retail savers to seek alternative wealth preservation. Rank is rolling out algorithmic tokenized treasury yields with instant liquidity.',
+    author: 'Temitayo Jaiyeola',
+    date: '22nd Sep 2026',
+    readTime: '5 min read',
+    image: fintechWealthApp,
+    articleId: 'dispatch-fintech-rails',
+    startupId: 'rank-wealth',
+  },
+  {
+    id: 'story-stitch-retail',
+    category: 'FinTech',
+    title: 'South Africa’s Stitch Secures Bank of Choice Status With Major Pan-African Retailers',
+    deck: 'By bypassing legacy card networks in favor of direct bank-to-bank settlement, Stitch is cutting merchant processing overhead by 65%.',
+    author: 'Gugulethu Ndlovu',
+    date: '21st Sep 2026',
+    readTime: '4 min read',
+    image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80',
+    articleId: 'dispatch-fintech-rails',
+    startupId: 'stitch',
+  },
+  {
+    id: 'story-omni-traction',
+    category: 'Acquisitions',
+    title: 'OmniRetail Acquires Traction to Consolidate Merchant POS & FMCG Logistics Across West Africa',
+    deck: 'The cash-and-stock deal unites informal retailer inventory fulfillment with embedded credit facilities across 80,000 neighborhood storefronts.',
+    author: 'Muktar Oladipo',
+    date: '20th Sep 2026',
+    readTime: '5 min read',
+    image: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+    articleId: 'dispatch-yc-agents',
+    startupId: 'omni-retail',
+  },
+  {
+    id: 'story-octamile-climate',
+    category: 'Climate',
+    title: 'Octamile Introduces Parametric Crop Insurance for East African Agritech Cooperatives',
+    deck: 'Using satellite weather telemetry and automated smart contracts, payouts are disbursed within 24 hours of drought threshold breaches.',
+    author: 'Fadekemi Abiru',
+    date: '19th Sep 2026',
+    readTime: '4 min read',
+    image: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+    articleId: 'dispatch-842',
+    startupId: 'octamile',
+  },
+  {
+    id: 'story-wasoko-maxab',
+    category: 'Ecommerce',
+    title: 'Wasoko & MaxAB Finalize Post-Merger Operational Integration Across 5 Core Markets',
+    deck: 'The combined entity reports positive unit economics in Cairo and Nairobi as route optimization and bulk procurement synergies take effect.',
+    author: 'Michael Kimani',
+    date: '18th Sep 2026',
+    readTime: '6 min read',
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
+    articleId: 'dispatch-yc-agents',
+    startupId: 'wasoko-maxab',
+  },
+  {
+    id: 'story-altschool-expansion',
+    category: 'EdTech',
+    title: 'AltSchool Africa Unveils Specialized AI Engineering & Data Operations Academies',
+    deck: 'With over 40,000 learners trained to date, the vocational platform is expanding direct placement pipelines into European and North American tech teams.',
+    author: 'Alexander Onukwue',
+    date: '17th Sep 2026',
+    readTime: '4 min read',
+    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80',
+    articleId: 'dispatch-842',
+    startupId: 'altschool',
+  },
+  {
+    id: 'story-kasha-remedial',
+    category: 'Femtech',
+    title: 'Kasha Expands Digital Women’s Healthcare Supply Chains Into Francophone Central Africa',
+    deck: 'Reaching 3 million customers across East Africa, the confidential healthcare access network is partnering with regional ministries to scale maternal health products.',
+    author: 'Ngozi Chukwu',
+    date: '16th Sep 2026',
+    readTime: '5 min read',
+    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80',
+    articleId: 'dispatch-842',
+    startupId: 'kasha',
+  },
+  {
+    id: 'story-ecosystem-h2',
+    category: 'Ecosystem',
+    title: 'African Tech Funding In 2026: Debt Financing Outpaces Venture Equity Amid Valuation Realism',
+    deck: 'Founders prioritize capital efficiency, local currency debt syndicates, and positive cash flow over speculative multi-stage venture dilution.',
+    author: 'Kenn Abuya',
+    date: '15th Sep 2026',
+    readTime: '7 min read',
+    image: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=800&q=80',
+    articleId: 'dispatch-842',
+    startupId: 'ile-ayaba',
+  },
+];
+
+const CATEGORY_NAV_ITEMS = [
+  'Acquisitions',
+  'African Tech Roundup',
+  'Agritech',
+  'Climate',
+  'Digest',
+  'Ecommerce',
+  'Ecosystem',
+  'EdTech',
+  'Femtech',
+  'FinTech',
+];
 
 export const StartupsView: React.FC<StartupsViewProps> = ({
   onNavigate,
@@ -43,763 +202,698 @@ export const StartupsView: React.FC<StartupsViewProps> = ({
   onToggleSave,
   onOpenContact,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'unicorn' | 'investment' | 'arr' | 'valuation'>('unicorn');
-  const [selectedStartupForModal, setSelectedStartupForModal] = useState<Startup | null>(null);
-  const [contactSuccessMessage, setContactSuccessMessage] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    STARTUPS_LIST.forEach((s) => set.add(s.category));
-    return ['All', ...Array.from(set)];
-  }, []);
+  // Startup Profiles Carousel State
+  const startupProfilesList = useMemo(() => Object.values(STARTUP_PROFILES), []);
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
+  const [isCarouselHovered, setIsCarouselHovered] = useState(false);
 
-  const filteredStartups = useMemo(() => {
-    return STARTUPS_LIST.filter((startup) => {
-      // Tab filter
-      if (activeTab === 'trending' && !startup.isTrending) return false;
-      if (activeTab === 'unicorn' && !startup.isLikelyToUnicorn) return false;
-      if (activeTab === 'investment' && !startup.isLikelyToInvest) return false;
+  // Auto-advance interval (pauses on hover)
+  useEffect(() => {
+    if (isCarouselHovered || startupProfilesList.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveCarouselIndex((prev) => (prev + 1) % startupProfilesList.length);
+    }, 3800);
+    return () => clearInterval(interval);
+  }, [isCarouselHovered, startupProfilesList.length]);
 
-      // Category filter
-      if (selectedCategory !== 'All' && startup.category !== selectedCategory) {
-        return false;
-      }
+  // Valuation Calculator State
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [calcArr, setCalcArr] = useState<number>(3.5);
+  const [calcGrowth, setCalcGrowth] = useState<number>(140);
+  const [calcSector, setCalcSector] = useState<'fintech' | 'agritech' | 'ai' | 'ecommerce'>('fintech');
 
-      // Search query filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = startup.name.toLowerCase().includes(q);
-        const matchesTicker = startup.ticker.toLowerCase().includes(q);
-        const matchesTagline = startup.tagline.toLowerCase().includes(q);
-        const matchesCategory = startup.category.toLowerCase().includes(q);
-        const matchesFounders = startup.founders.some(
-          (f) => f.name.toLowerCase().includes(q) || f.pedigree.toLowerCase().includes(q)
-        );
-        const matchesInvestors = startup.keyInvestors.some((inv) =>
-          inv.toLowerCase().includes(q)
-        );
-        const matchesTech = startup.techStack.some((t) => t.toLowerCase().includes(q));
+  // Multiples calculation
+  const calculatedValuation = useMemo(() => {
+    let baseMultiple = 8;
+    if (calcSector === 'ai') baseMultiple = 15;
+    if (calcSector === 'fintech') baseMultiple = 10;
+    if (calcSector === 'agritech') baseMultiple = 7;
+    if (calcSector === 'ecommerce') baseMultiple = 5;
 
-        if (
-          !matchesName &&
-          !matchesTicker &&
-          !matchesTagline &&
-          !matchesCategory &&
-          !matchesFounders &&
-          !matchesInvestors &&
-          !matchesTech
-        ) {
+    // Growth booster
+    const growthFactor = calcGrowth > 200 ? 1.5 : calcGrowth > 100 ? 1.25 : 1.0;
+    const finalMultiple = baseMultiple * growthFactor;
+    const valuation = calcArr * finalMultiple;
+    return {
+      multiple: finalMultiple.toFixed(1),
+      valuation: valuation.toFixed(1),
+    };
+  }, [calcArr, calcGrowth, calcSector]);
+
+  // Handle Share button
+  const handleShare = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setShareToast('Page link copied to clipboard!');
+      setTimeout(() => setShareToast(null), 3000);
+    } else {
+      setShareToast('Sharing TechCabal / Nextake Startups Desk');
+      setTimeout(() => setShareToast(null), 3000);
+    }
+  };
+
+  // Filter editorial stories based on category & search
+  const filteredStories = useMemo(() => {
+    return EDITORIAL_STORIES.filter((story) => {
+      if (selectedCategory !== 'All') {
+        if (selectedCategory === 'African Tech Roundup' && story.category !== 'Ecosystem') {
+          return false;
+        }
+        if (selectedCategory === 'Digest' && story.category !== 'Startups') {
+          return false;
+        }
+        if (story.category.toLowerCase() !== selectedCategory.toLowerCase()) {
           return false;
         }
       }
-
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = story.title.toLowerCase().includes(q);
+        const matchDeck = story.deck.toLowerCase().includes(q);
+        const matchCategory = story.category.toLowerCase().includes(q);
+        const matchAuthor = story.author.toLowerCase().includes(q);
+        return matchTitle || matchDeck || matchCategory || matchAuthor;
+      }
       return true;
-    }).sort((a, b) => {
-      if (sortBy === 'unicorn') {
-        return b.unicornProbability - a.unicornProbability;
-      }
-      if (sortBy === 'investment') {
-        const scoreRank: Record<string, number> = { AAA: 4, 'AA+': 3, AA: 2, 'A+': 1 };
-        return (scoreRank[b.investmentScore] || 0) - (scoreRank[a.investmentScore] || 0);
-      }
-      if (sortBy === 'arr') {
-        const parseArr = (str: string) => parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
-        return parseArr(b.arr) - parseArr(a.arr);
-      }
-      if (sortBy === 'valuation') {
-        const parseVal = (str: string) => parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
-        return parseVal(b.valuation) - parseVal(a.valuation);
-      }
-      return 0;
     });
-  }, [activeTab, selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, searchQuery]);
 
-  // Spotlight leaders
-  const topUnicornLeader = useMemo(() => {
-    return [...STARTUPS_LIST].sort((a, b) => b.unicornProbability - a.unicornProbability)[0];
-  }, []);
+  // Lead Top Story & Secondary Stack
+  const topStory = useMemo(() => {
+    return filteredStories.find((s) => s.isTopStory) || filteredStories[0] || EDITORIAL_STORIES[0];
+  }, [filteredStories]);
 
-  const topInvestmentPick = useMemo(() => {
-    return STARTUPS_LIST.find((s) => s.investmentScore === 'AAA' && s.stage === 'Seed') || STARTUPS_LIST[0];
-  }, []);
+  const secondaryStories = useMemo(() => {
+    return filteredStories.filter((s) => s.id !== topStory.id).slice(0, 3);
+  }, [filteredStories, topStory]);
 
-  const topTrendingBreakout = useMemo(() => {
-    return STARTUPS_LIST.find((s) => s.isTrending && s.category === 'AI & Agents') || STARTUPS_LIST[0];
-  }, []);
+  const moreEditorialFeed = useMemo(() => {
+    const leadIds = new Set([topStory.id, ...secondaryStories.map((s) => s.id)]);
+    return filteredStories.filter((s) => !leadIds.has(s.id));
+  }, [filteredStories, topStory, secondaryStories]);
 
   return (
-    <div className="bg-[#fafbfc] min-h-screen text-slate-900 pb-28">
+    <div className="min-h-screen bg-white text-black font-sans antialiased selection:bg-[#00c078] selection:text-black">
       {/* ========================================================================= */}
-      {/* 1. TOP MARKET INTELLIGENCE TERMINAL BAR */}
+      {/* STARTUPS HEADER & CATEGORY NAVIGATION BAR (FROM REFERENCE UI) */}
       {/* ========================================================================= */}
-      <section className="bg-[#070b10] border-b border-[#1b2636] text-white pt-8 pb-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-400 mb-4">
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 -ml-4.5"></span>
-              <span className="text-emerald-400 font-bold tracking-wider uppercase">
-                NexTake Venture Intelligence // Private Market Desk
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-3 sm:pb-4">
+          {/* Main Title: Startups */}
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h1
+              onClick={() => setSelectedCategory('All')}
+              className="text-3xl sm:text-4xl lg:text-[40px] font-black tracking-tight text-black cursor-pointer hover:opacity-80 transition-opacity leading-none"
+              title="Click to reset to All Startups"
+            >
+              Startups
+            </h1>
+            {selectedCategory !== 'All' && (
+              <button
+                onClick={() => setSelectedCategory('All')}
+                className="text-xs text-[#00c078] hover:underline font-bold"
+              >
+                Reset filter ({selectedCategory})
+              </button>
+            )}
+          </div>
+
+          {/* Navigation Bar Row */}
+          <div className="flex items-center justify-between gap-4">
+            {/* Scrollable Category Links */}
+            <div className="flex items-center overflow-x-auto no-scrollbar text-xs sm:text-[13.5px] py-1 font-medium">
+              {CATEGORY_NAV_ITEMS.map((cat, idx) => {
+                const isActive = selectedCategory === cat;
+                return (
+                  <React.Fragment key={cat}>
+                    <button
+                      onClick={() => setSelectedCategory((prev) => (prev === cat ? 'All' : cat))}
+                      className={`whitespace-nowrap transition-colors py-1 ${
+                        isActive
+                          ? 'text-[#00c078] font-black'
+                          : 'text-black hover:text-[#00c078]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                    {idx < CATEGORY_NAV_ITEMS.length - 1 && (
+                      <span className="text-slate-300 font-light select-none mx-2 sm:mx-2.5">
+                        |
+                      </span>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+
+              {/* More Dropdown */}
+              <span className="text-slate-300 font-light select-none mx-2 sm:mx-2.5">
+                |
               </span>
-            </div>
-            <div className="flex items-center space-x-4 text-[11px] text-slate-400">
-              <span>Coverage: Q3-Q4 2026</span>
-              <span>•</span>
-              <span>Updated: Real-time Telemetry</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-                Venture & Startup Radar
-              </h1>
-              <p className="mt-2 text-sm sm:text-base text-slate-300 max-w-2xl font-sans">
-                Real-time technical due diligence, predictive unicorn trajectory models, and capital efficiency indexes across frontier technology ventures.
-              </p>
-            </div>
-
-            {/* Macro Telemetry Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 bg-[#0d1420] border border-slate-800 rounded-xl p-3 sm:p-4">
-              <div>
-                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Unicorn Index</div>
-                <div className="text-base sm:text-lg font-black text-emerald-400 font-mono flex items-center gap-1">
-                  {STARTUP_MARKET_INDICATORS.unicornPipelineIndex}
-                  <span className="text-[10px] text-emerald-500 font-normal">({STARTUP_MARKET_INDICATORS.unicornPipelineChange})</span>
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Deal Flow TAM</div>
-                <div className="text-base sm:text-lg font-black text-white font-mono">
-                  {STARTUP_MARKET_INDICATORS.totalDealFlowVolume}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Avg Growth YoY</div>
-                <div className="text-base sm:text-lg font-black text-cyan-400 font-mono">
-                  {STARTUP_MARKET_INDICATORS.avgArrGrowth}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Capital Efficiency</div>
-                <div className="text-base sm:text-lg font-black text-amber-400 font-mono">
-                  {STARTUP_MARKET_INDICATORS.capitalEfficiencyAvg}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 2. SPOTLIGHT PODIUM / HERO HIGHLIGHTS */}
-      {/* ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          {/* Spotlight 1: #1 Most Likely to Unicorn */}
-          <div
-            onClick={() => setSelectedStartupForModal(topUnicornLeader)}
-            className="group cursor-pointer bg-white rounded-xl border-2 border-emerald-500/60 p-5 shadow-lg hover:shadow-xl transition-all relative overflow-hidden flex flex-col justify-between"
-          >
-            <div className="absolute top-0 right-0 bg-emerald-500 text-slate-950 text-[10px] font-black font-mono px-3 py-1 rounded-bl-lg uppercase tracking-wider flex items-center gap-1 shadow">
-              <span>🦄 #1 Unicorn Trajectory</span>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-mono text-emerald-700 font-bold mb-1">
-                <span>{topUnicornLeader.ticker}</span>
-                <span>•</span>
-                <span>{topUnicornLeader.category}</span>
-              </div>
-              <h3 className="text-xl font-black text-slate-950 group-hover:text-emerald-700 transition-colors">
-                {topUnicornLeader.name}
-              </h3>
-              <p className="text-xs text-slate-600 line-clamp-2 mt-1.5 leading-relaxed">
-                {topUnicornLeader.tagline}
-              </p>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-              <div>
-                <span className="text-[10px] text-slate-400 block uppercase">Unicorn Probability</span>
-                <span className="text-emerald-700 font-black text-base">{topUnicornLeader.unicornProbability}%</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 block uppercase">Valuation</span>
-                <span className="text-slate-900 font-black text-sm">{topUnicornLeader.valuation}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 block uppercase">ARR Run-rate</span>
-                <span className="text-slate-900 font-black text-sm">{topUnicornLeader.arr}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Spotlight 2: #1 Top Investment Pick */}
-          <div
-            onClick={() => setSelectedStartupForModal(topInvestmentPick)}
-            className="group cursor-pointer bg-white rounded-xl border-2 border-amber-500/60 p-5 shadow-lg hover:shadow-xl transition-all relative overflow-hidden flex flex-col justify-between"
-          >
-            <div className="absolute top-0 right-0 bg-amber-400 text-slate-950 text-[10px] font-black font-mono px-3 py-1 rounded-bl-lg uppercase tracking-wider flex items-center gap-1 shadow">
-              <span>💎 Top Seed Pick (AAA)</span>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-mono text-amber-700 font-bold mb-1">
-                <span>{topInvestmentPick.ticker}</span>
-                <span>•</span>
-                <span>{topInvestmentPick.category}</span>
-              </div>
-              <h3 className="text-xl font-black text-slate-950 group-hover:text-amber-700 transition-colors">
-                {topInvestmentPick.name}
-              </h3>
-              <p className="text-xs text-slate-600 line-clamp-2 mt-1.5 leading-relaxed">
-                {topInvestmentPick.tagline}
-              </p>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-              <div>
-                <span className="text-[10px] text-slate-400 block uppercase">Investment Conviction</span>
-                <span className="text-amber-600 font-black text-base">{topInvestmentPick.investmentScore} Grade</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 block uppercase">Growth YoY</span>
-                <span className="text-emerald-700 font-black text-sm">{topInvestmentPick.growthYoY}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 block uppercase">Burn Multiple</span>
-                <span className="text-slate-900 font-black text-sm">{topInvestmentPick.burnMultiple}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Spotlight 3: #1 Viral Trending Breakout */}
-          <div
-            onClick={() => setSelectedStartupForModal(topTrendingBreakout)}
-            className="group cursor-pointer bg-white rounded-xl border-2 border-cyan-500/60 p-5 shadow-lg hover:shadow-xl transition-all relative overflow-hidden flex flex-col justify-between"
-          >
-            <div className="absolute top-0 right-0 bg-cyan-400 text-slate-950 text-[10px] font-black font-mono px-3 py-1 rounded-bl-lg uppercase tracking-wider flex items-center gap-1 shadow">
-              <span>🔥 #1 Trending Breakout</span>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-mono text-cyan-700 font-bold mb-1">
-                <span>{topTrendingBreakout.ticker}</span>
-                <span>•</span>
-                <span>{topTrendingBreakout.category}</span>
-              </div>
-              <h3 className="text-xl font-black text-slate-950 group-hover:text-cyan-700 transition-colors">
-                {topTrendingBreakout.name}
-              </h3>
-              <p className="text-xs text-slate-600 line-clamp-2 mt-1.5 leading-relaxed">
-                {topTrendingBreakout.tagline}
-              </p>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-              <div>
-                <span className="text-[10px] text-slate-400 block uppercase">Stage / Round</span>
-                <span className="text-cyan-700 font-black text-base">{topTrendingBreakout.stage}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 block uppercase">Net Retention (NRR)</span>
-                <span className="text-slate-900 font-black text-sm">{topTrendingBreakout.nrr}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 block uppercase">Runway</span>
-                <span className="text-slate-900 font-black text-sm">{topTrendingBreakout.runway}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 3. CONTROLS, TABS & FILTERS */}
-      {/* ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">
-          {/* Main Primary View Switcher Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setActiveTab('all')}
-                className={`px-3.5 py-2 text-xs font-mono font-bold tracking-wider rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'all'
-                    ? 'bg-slate-950 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                <Compass className="w-3.5 h-3.5" />
-                <span>All Startups ({STARTUPS_LIST.length})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('trending')}
-                className={`px-3.5 py-2 text-xs font-mono font-bold tracking-wider rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'trending'
-                    ? 'bg-cyan-600 text-white shadow-md'
-                    : 'bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
-                }`}
-              >
-                <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
-                <span>Trending Startups</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('unicorn')}
-                className={`px-3.5 py-2 text-xs font-mono font-bold tracking-wider rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'unicorn'
-                    ? 'bg-emerald-600 text-white shadow-md'
-                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Most Likely to Unicorn ($1B+)</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('investment')}
-                className={`px-3.5 py-2 text-xs font-mono font-bold tracking-wider rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'investment'
-                    ? 'bg-amber-600 text-white shadow-md'
-                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
-                }`}
-              >
-                <Award className="w-3.5 h-3.5 text-amber-500" />
-                <span>Most Likely to Investment (Top Conviction)</span>
-              </button>
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="flex items-center space-x-2 text-xs font-mono">
-              <span className="text-slate-400">Sort:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                aria-label="Sort startups by metric"
-                className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="unicorn">Unicorn Probability %</option>
-                <option value="investment">Investment Grade (AAA)</option>
-                <option value="arr">ARR Velocity</option>
-                <option value="valuation">Current Valuation</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Search and Category Filter Pills */}
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search startups, founders, tech or investors..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 placeholder-slate-400"
-              />
-              {searchQuery && (
+              <div className="relative inline-block">
                 <button
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search query"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+                  className="flex items-center space-x-1 text-black hover:text-[#00c078] whitespace-nowrap py-1 font-medium"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <span>More</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-black" />
                 </button>
+
+                {isMoreMenuOpen && (
+                  <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl py-2 z-30 text-xs">
+                    <button
+                      onClick={() => {
+                        setSelectedCategory('All');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        setIsMoreMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 text-black flex items-center gap-2 font-medium"
+                    >
+                      <Award className="w-3.5 h-3.5 text-[#00c078]" />
+                      <span>All Startups Desk</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onNavigate('startup-article', 'paystack');
+                        setIsMoreMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 text-black flex items-center gap-2 font-medium"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-[#00c078]" />
+                      <span>Investment Briefs</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCalculatorOpen(true);
+                        setIsMoreMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 text-black flex items-center gap-2 font-medium"
+                    >
+                      <Calculator className="w-3.5 h-3.5 text-[#00c078]" />
+                      <span>Valuation Calculator</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedCategory('FinTech');
+                        setIsMoreMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 text-black flex items-center gap-2 font-medium"
+                    >
+                      <span className="w-3.5 h-3.5 text-[#00c078] font-bold">₦</span>
+                      <span>FinTech Spotlight</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Share Button (Far Right) */}
+            <div className="relative shrink-0">
+              <button
+                onClick={handleShare}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-black text-xs sm:text-sm font-semibold transition-colors border border-slate-200"
+              >
+                <span>Share</span>
+                <svg
+                  className="w-3.5 h-3.5 fill-none stroke-current"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="15 14 20 9 15 4" />
+                  <path d="M4 20v-7a4 4 0 0 1 4-4h12" />
+                </svg>
+              </button>
+              {shareToast && (
+                <div className="absolute right-0 top-10 whitespace-nowrap bg-[#00c078] text-black text-[11px] font-bold px-3 py-1 rounded shadow-lg animate-in fade-in duration-150 z-30">
+                  {shareToast}
+                </div>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* LEFT COLUMN: DOMINANT LEAD STORY (Col-span 7) */}
+          <div className="lg:col-span-7 flex flex-col group">
+            <div
+              onClick={() => onNavigate('startup-article', topStory.startupId || 'ile-ayaba')}
+              className="cursor-pointer"
+            >
+              {/* Lead Image */}
+              <div className="relative w-full aspect-16/10 rounded-xs overflow-hidden bg-slate-100 border border-slate-200">
+                <img
+                  src={topStory.image}
+                  alt={topStory.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+              </div>
 
-            {/* Sector Tags Scroll */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs font-mono no-scrollbar">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-2.5 py-1 rounded-md whitespace-nowrap transition-colors ${
-                    selectedCategory === cat
-                      ? 'bg-slate-800 text-white font-bold'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              {/* Title & Metadata directly below the image */}
+              <div className="mt-4 space-y-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#00c078]">
+                  {topStory.category}
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-black leading-tight group-hover:text-[#00c078] transition-colors">
+                  {topStory.title}
+                </h2>
+                <p className="text-sm text-slate-700 leading-relaxed line-clamp-3">
+                  {topStory.deck}
+                </p>
+                <div className="flex items-center space-x-2 text-xs text-slate-500 pt-1 font-sans">
+                  <span className="text-slate-900 font-semibold">{topStory.author}</span>
+                  <span>|</span>
+                  <span>{topStory.date}</span>
+                  <span>·</span>
+                  <span>{topStory.readTime}</span>
+                </div>
+              </div>
             </div>
+
+            {/* Quick action bar */}
+            <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <button
+                onClick={() => onToggleSave(topStory.id)}
+                className={`flex items-center space-x-1.5 transition-colors ${
+                  savedIds.includes(topStory.id) ? 'text-[#00c078] font-bold' : 'hover:text-black'
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span>{savedIds.includes(topStory.id) ? 'Saved' : 'Save Story'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: STACKED SECONDARY FEATURES (Col-span 5) */}
+          <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
+            {secondaryStories.map((story, index) => (
+              <div
+                key={story.id}
+                onClick={() => onNavigate('startup-article', story.startupId || 'ile-ayaba')}
+                className="group cursor-pointer flex flex-col space-y-3 pb-6 border-b border-slate-200 last:border-b-0 last:pb-0"
+              >
+                {/* If first secondary item, show the featured thumbnail matching Capture.PNG */}
+                {index === 0 && (
+                  <div className="relative w-full aspect-16/9 rounded-xs overflow-hidden bg-slate-100 border border-slate-200">
+                    <img
+                      src={story.image}
+                      alt={story.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#00c078]">
+                      {story.category}
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-bold text-black group-hover:text-[#00c078] transition-colors leading-snug">
+                    {story.title}
+                  </h3>
+                  <div className="flex items-center space-x-2 text-xs text-slate-500 pt-0.5">
+                    <span className="text-slate-800 font-medium">{story.author}</span>
+                    <span>|</span>
+                    <span>{story.date}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. MAIN STARTUP DOSSIER GRID */}
+      {/* 3B. FEATURED STARTUP PROFILES & INVESTMENT BRIEFS (AUTO CAROUSEL) */}
       {/* ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-xs font-mono text-slate-500">
-            Showing <span className="font-bold text-slate-900">{filteredStartups.length}</span> verified ventures matching criteria
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-200 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-4">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#00c078] mb-1">
+              <span>Investment Briefs & Company Profiles</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-black">
+              Startup Due Diligence & Dossiers
+            </h2>
+            <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+              Standardized 14-section investment intelligence briefs covering unit economics, proprietary technology, funding history, and identifiable risks.
+            </p>
           </div>
-          {activeTab !== 'all' && (
+
+          {/* Navigation Controls */}
+          <div className="flex items-center space-x-2 shrink-0">
             <button
-              onClick={() => {
-                setActiveTab('all');
-                setSelectedCategory('All');
-                setSearchQuery('');
-              }}
-              className="text-xs font-mono text-emerald-700 hover:underline"
+              onClick={() => setActiveCarouselIndex((prev) => (prev - 1 + startupProfilesList.length) % startupProfilesList.length)}
+              className="w-8 h-8 rounded-full border border-slate-200 hover:border-black flex items-center justify-center text-slate-700 hover:text-black transition-colors bg-white shadow-xs"
+              aria-label="Previous card"
             >
-              Reset all filters
+              <ChevronLeft className="w-4 h-4" />
             </button>
-          )}
+            <button
+              onClick={() => setActiveCarouselIndex((prev) => (prev + 1) % startupProfilesList.length)}
+              className="w-8 h-8 rounded-full border border-slate-200 hover:border-black flex items-center justify-center text-slate-700 hover:text-black transition-colors bg-white shadow-xs"
+              aria-label="Next card"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {filteredStartups.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center max-w-lg mx-auto">
-            <Rocket className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-900 font-mono">No startups match filter</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Try adjusting your search query, sector pill, or selected view tab.
-            </p>
-            <button
-              onClick={() => {
-                setActiveTab('all');
-                setSelectedCategory('All');
-                setSearchQuery('');
-              }}
-              className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-mono font-bold"
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredStartups.map((startup) => {
-              const isSaved = savedIds.includes(startup.id);
+        {/* Carousel Container: Fitted to container size */}
+        <div
+          className="relative overflow-hidden py-2"
+          onMouseEnter={() => setIsCarouselHovered(true)}
+          onMouseLeave={() => setIsCarouselHovered(false)}
+        >
+          {/* Sliding Track */}
+          <div
+            className="flex items-stretch transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] [--card-w:100%] sm:[--card-w:calc((100%-20px)/2)] lg:[--card-w:calc((100%-48px)/3)] [--card-gap:16px] sm:[--card-gap:20px] lg:[--card-gap:24px]"
+            style={{
+              gap: 'var(--card-gap)',
+              transform: `translateX(calc(-1 * ${(startupProfilesList.length + activeCarouselIndex)} * (var(--card-w) + var(--card-gap))))`,
+            }}
+          >
+            {[...startupProfilesList, ...startupProfilesList, ...startupProfilesList].map((prof, idx) => {
+              const actualIndex = idx % startupProfilesList.length;
+              const isActive = actualIndex === activeCarouselIndex;
 
               return (
                 <div
-                  key={startup.id}
-                  className="bg-white rounded-2xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between relative group"
+                  key={`${prof.id}-${idx}`}
+                  style={{ width: 'var(--card-w)' }}
+                  onClick={() => {
+                    onNavigate('startup-article', prof.id);
+                  }}
+                  className={`group relative shrink-0 cursor-pointer rounded-xl p-5 min-h-[300px] flex flex-col justify-between transition-all duration-300 select-none overflow-hidden ${
+                    isActive
+                      ? 'border-2 border-[#00c078] shadow-2xl ring-2 ring-[#00c078]/40 scale-[1.01] opacity-100 z-10'
+                      : 'border border-white/20 opacity-90 hover:opacity-100 hover:border-white/50 shadow-md hover:shadow-xl'
+                  }`}
                 >
-                  {/* Top Bar inside card */}
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-900 text-white">
-                            {startup.ticker}
-                          </span>
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-slate-100 text-slate-700">
-                            {startup.category}
-                          </span>
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-600">
-                            {startup.stage}
-                          </span>
+                  {/* Background Picture */}
+                  {prof.featuredImage ? (
+                    <img
+                      src={prof.featuredImage}
+                      alt={prof.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-slate-900" />
+                  )}
 
-                          {startup.isTrending && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-100 text-orange-800 flex items-center gap-1">
-                              <Flame className="w-3 h-3 text-orange-600 fill-orange-500" />
-                              Trending
-                            </span>
-                          )}
+                  {/* Dark Gradient Overlay for Contrast & Legibility */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/75 to-black/40 pointer-events-none" />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors pointer-events-none" />
 
-                          {startup.isLikelyToUnicorn && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                              <Sparkles className="w-3 h-3 text-emerald-600" />
-                              {startup.unicornProbability}% Unicorn Odds
-                            </span>
-                          )}
-
-                          {startup.isLikelyToInvest && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-900 flex items-center gap-1">
-                              <Award className="w-3 h-3 text-amber-600" />
-                              {startup.investmentScore} Conviction
-                            </span>
+                  {/* Content Container (Layered above background) */}
+                  <div className="relative z-10 space-y-3">
+                    {/* Header row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-white/15 backdrop-blur-md border border-white/25 overflow-hidden shrink-0 flex items-center justify-center font-bold text-white text-sm shadow-xs">
+                          {prof.logo ? (
+                            <img src={prof.logo} alt={prof.name} className="w-full h-full object-cover" />
+                          ) : (
+                            prof.name.charAt(0)
                           )}
                         </div>
-
-                        <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight group-hover:text-emerald-700 transition-colors">
-                          {startup.name}
-                        </h2>
+                        <div className="min-w-0">
+                          <h3 className="font-extrabold text-base sm:text-lg text-white group-hover:text-[#00e599] transition-colors leading-tight drop-shadow-xs truncate">
+                            {prof.name}
+                          </h3>
+                          <div className="text-[11px] text-slate-300 truncate">{prof.headquarters}</div>
+                        </div>
                       </div>
-
-                      {/* Save to radar bookmark */}
-                      <button
-                        onClick={() => onToggleSave(startup.id)}
-                        title={isSaved ? 'Remove from saved' : 'Save to radar'}
-                        className={`p-2 rounded-lg border transition-colors ${
-                          isSaved
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                            : 'bg-slate-50 text-slate-400 hover:text-slate-800 border-slate-200'
-                        }`}
-                      >
-                        <Bookmark className="w-4 h-4" />
-                      </button>
+                      <span className="shrink-0 ml-2 px-2.5 py-0.5 rounded text-[11px] font-bold bg-white/15 backdrop-blur-md text-white border border-white/25 shadow-xs">
+                        {prof.stage}
+                      </span>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-600 font-sans mt-2.5 leading-relaxed">
-                      {startup.tagline}
+                    {/* One line summary */}
+                    <p className="text-xs text-slate-200 line-clamp-2 leading-relaxed drop-shadow-xs">
+                      {prof.oneLineDescription}
                     </p>
 
-                    {/* Operational Telemetry Matrix */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#f8fafc] border border-slate-100 rounded-xl p-3 mt-4 text-xs font-mono">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">Valuation</span>
-                        <span className="font-bold text-slate-900 text-sm">{startup.valuation}</span>
+                    {/* Key Metrics Chips */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/15 text-xs">
+                      <div className="bg-black/50 backdrop-blur-md p-2.5 rounded-lg border border-white/15 shadow-xs">
+                        <span className="text-[10px] text-slate-300 font-bold uppercase block">Funding Raised</span>
+                        <span className="font-black text-white truncate block text-xs sm:text-sm">{prof.investmentSnapshot.fundingRaised}</span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">ARR / Growth</span>
-                        <span className="font-bold text-emerald-700 text-sm">
-                          {startup.arr} <span className="text-[11px] font-normal text-emerald-600">({startup.growthYoY})</span>
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">Burn Multiple</span>
-                        <span className="font-bold text-slate-900 text-sm">{startup.burnMultiple}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block uppercase">Net Retention</span>
-                        <span className="font-bold text-cyan-700 text-sm">{startup.nrr}</span>
-                      </div>
-                    </div>
-
-                    {/* Key Technical Moat Brief */}
-                    <div className="mt-3.5 text-xs text-slate-600 bg-emerald-50/40 border border-emerald-200/50 rounded-lg p-2.5">
-                      <span className="font-bold text-emerald-950 font-mono block mb-0.5">Defensible Moat:</span>
-                      <p className="line-clamp-2 leading-relaxed">{startup.moat}</p>
-                    </div>
-
-                    {/* Founders & Investors Strip */}
-                    <div className="mt-3.5 space-y-1.5 text-xs font-mono text-slate-500">
-                      <div>
-                        <span className="font-bold text-slate-700">Founders:</span>{' '}
-                        {startup.founders.map((f) => f.name).join(', ')}
-                      </div>
-                      <div>
-                        <span className="font-bold text-slate-700">Key Backers:</span>{' '}
-                        {startup.keyInvestors.join(' • ')}
+                      <div className="bg-black/50 backdrop-blur-md p-2.5 rounded-lg border border-white/15 shadow-xs">
+                        <span className="text-[10px] text-slate-300 font-bold uppercase block">Revenue</span>
+                        <span className="font-black text-white truncate block text-xs sm:text-sm">{prof.investmentSnapshot.revenue}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Card Bottom CTA */}
-                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                    <div className="text-[11px] font-mono text-slate-400">
-                      HQ: {startup.hq} • Est. {startup.founded}
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedStartupForModal(startup)}
-                      className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-600 text-white font-mono text-xs font-bold tracking-wider transition-all flex items-center gap-1.5 shadow"
-                    >
-                      <span>Investment Brief</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Action footer */}
+                  <div className="relative z-10 mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-slate-300 font-medium">Updated {prof.updatedDate}</span>
+                    <span className="text-[#00e599] font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-1 drop-shadow-xs">
+                      <span>Open Brief</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
+        </div>
+
+        {/* Carousel Progress Indicators / Dots */}
+        <div className="flex items-center justify-center space-x-1.5 mt-4">
+          {startupProfilesList.map((prof, idx) => {
+            const isActive = idx === activeCarouselIndex;
+            return (
+              <button
+                key={prof.id}
+                onClick={() => setActiveCarouselIndex(idx)}
+                aria-label={`Go to slide ${idx + 1}`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  isActive ? 'w-6 bg-[#00c078]' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                }`}
+              />
+            );
+          })}
+        </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. STARTUP INVESTMENT DOSSIER MODAL */}
+      {/* 4. MORE IN STARTUPS: CATEGORY EDITORIAL STREAM */}
       {/* ========================================================================= */}
-      {selectedStartupForModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden my-8 relative flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="bg-[#070b10] text-white p-5 sm:p-6 border-b border-slate-800 flex items-start justify-between gap-4">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-slate-200 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-[#00c078] mb-1">
+              Curated Dispatches
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-black">
+              {selectedCategory === 'All' ? 'Latest in Startups' : `${selectedCategory} Startups`}
+            </h2>
+          </div>
+
+          <div className="flex items-center space-x-3 text-xs">
+            <span className="text-slate-600 font-medium">
+              Showing {filteredStories.length} stories
+            </span>
+            {selectedCategory !== 'All' && (
+              <button
+                onClick={() => setSelectedCategory('All')}
+                className="text-[#00c078] hover:underline font-semibold"
+              >
+                View All Categories
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 3-Column Story Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          {moreEditorialFeed.map((story) => (
+            <article
+              key={story.id}
+              onClick={() => onNavigate('startup-article', story.startupId || 'ile-ayaba')}
+              className="group cursor-pointer flex flex-col justify-between bg-white border border-slate-200 rounded-lg p-4 hover:border-[#00c078] shadow-xs hover:shadow-md transition-all"
+            >
               <div>
-                <div className="flex flex-wrap items-center gap-2 mb-2 text-xs font-mono">
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">
-                    {selectedStartupForModal.ticker}
-                  </span>
-                  <span className="text-slate-400">•</span>
-                  <span className="text-slate-300">{selectedStartupForModal.category}</span>
-                  <span className="text-slate-400">•</span>
-                  <span className="text-slate-300">{selectedStartupForModal.stage}</span>
+                <div className="relative w-full aspect-16/10 overflow-hidden rounded-xs bg-slate-100 border border-slate-100 mb-3">
+                  <img
+                    src={story.image}
+                    alt={story.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-xs text-[#009e60] text-[10px] font-bold px-2 py-0.5 rounded border border-[#00c078]/30 shadow-xs flex items-center gap-1">
+                    <FileText className="w-2.5 h-2.5" />
+                    <span>Investment Brief</span>
+                  </div>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                  {selectedStartupForModal.name}
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-300 font-sans mt-1">
-                  {selectedStartupForModal.tagline}
+                <div className="text-xs font-bold uppercase tracking-wider text-[#00c078] mb-1">
+                  {story.category}
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-black group-hover:text-[#00c078] transition-colors leading-snug line-clamp-2">
+                  {story.title}
+                </h3>
+                <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
+                  {story.deck}
                 </p>
               </div>
 
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="text-slate-800 font-medium">{story.author}</span>
+                <span className="text-[#009e60] font-bold group-hover:underline flex items-center gap-1">
+                  <span>View Brief</span>
+                  <ArrowRight className="w-3 h-3" />
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 5. INTERACTIVE VALUATION MULTIPLE CALCULATOR MODAL / WIDGET */}
+      {/* ========================================================================= */}
+      {calculatorOpen && (
+        <div
+          onClick={() => setCalculatorOpen(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xl bg-white border border-slate-200 rounded-xl shadow-2xl p-6 text-black space-y-6"
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-lg bg-[#00c078]/15 text-[#00c078] flex items-center justify-center font-bold">
+                  <Calculator className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-black">Startup Valuation Calculator</h3>
+                  <p className="text-xs text-slate-500">TechCabal venture multiple benchmarking engine</p>
+                </div>
+              </div>
               <button
-                onClick={() => {
-                  setSelectedStartupForModal(null);
-                  setContactSuccessMessage(false);
-                }}
-                className="text-slate-400 hover:text-white p-2 rounded-lg bg-white/5 border border-white/10"
+                onClick={() => setCalculatorOpen(false)}
+                className="text-slate-400 hover:text-black p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-6 text-sm">
-              {/* Telemetry Highlight Banner */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f8fafc] border border-slate-200 rounded-xl p-4 font-mono text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Unicorn Probability</span>
-                  <span className="text-lg font-black text-emerald-700">
-                    {selectedStartupForModal.unicornProbability}%
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Investment Conviction</span>
-                  <span className="text-lg font-black text-amber-600">
-                    {selectedStartupForModal.investmentScore} Grade
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Valuation / Raised</span>
-                  <span className="text-slate-900 font-bold">
-                    {selectedStartupForModal.valuation} / {selectedStartupForModal.totalRaised}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">ARR Run-rate</span>
-                  <span className="text-slate-900 font-bold">
-                    {selectedStartupForModal.arr} ({selectedStartupForModal.growthYoY})
-                  </span>
-                </div>
-              </div>
-
-              {/* Executive Thesis */}
+            {/* Controls */}
+            <div className="space-y-4 text-xs font-sans">
+              {/* Sector selector */}
               <div>
-                <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Executive Investment Thesis
-                </h4>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-800 leading-relaxed font-sans text-sm">
-                  {selectedStartupForModal.thesis}
-                </div>
-              </div>
-
-              {/* Defensible Moat */}
-              <div>
-                <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Monopolistic Moat & IP Barriers
-                </h4>
-                <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 text-emerald-950 leading-relaxed font-sans text-sm">
-                  {selectedStartupForModal.moat}
-                </div>
-              </div>
-
-              {/* Key Traction Milestones */}
-              <div>
-                <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Verified Production Milestones
-                </h4>
-                <ul className="space-y-2 text-xs font-mono text-slate-700">
-                  {selectedStartupForModal.milestones.map((m, idx) => (
-                    <li key={idx} className="flex items-start gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>{m}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Founders & Engineering Team */}
-              <div>
-                <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Founding Pedigree
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
-                  {selectedStartupForModal.founders.map((founder, idx) => (
-                    <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                      <div className="font-bold text-slate-900">{founder.name}</div>
-                      <div className="text-[11px] text-emerald-700 font-semibold mb-1">{founder.role}</div>
-                      <div className="text-[11px] text-slate-600 font-sans">{founder.pedigree}</div>
-                    </div>
+                <label className="text-slate-700 font-bold block mb-1.5 uppercase tracking-wider text-[11px]">
+                  Sector & Business Model
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'fintech', label: 'FinTech', mult: '10x' },
+                    { id: 'agritech', label: 'Agritech', mult: '7x' },
+                    { id: 'ai', label: 'AI & Data', mult: '15x' },
+                    { id: 'ecommerce', label: 'B2B Commerce', mult: '5x' },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setCalcSector(s.id as any)}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        calcSector === s.id
+                          ? 'border-[#00c078] bg-[#00c078]/10 text-black font-bold ring-1 ring-[#00c078]'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="font-bold">{s.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">Base: {s.mult}</div>
+                    </button>
                   ))}
                 </div>
               </div>
 
-              {/* Tech Stack & Risk Analysis */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Core Technical Architecture
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedStartupForModal.techStack.map((tech, idx) => (
-                      <span key={idx} className="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[11px]">
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
+              {/* Annual Recurring Revenue Slider */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                    Current ARR / Run Rate
+                  </span>
+                  <span className="text-[#00c078] font-bold text-sm">${calcArr}M</span>
                 </div>
-
-                <div>
-                  <h4 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Risk Assessment & Hedging
-                  </h4>
-                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-950 text-xs font-sans">
-                    <div className="flex items-center gap-1.5 font-bold font-mono text-amber-800 mb-1">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Critical Risk Vector:</span>
-                    </div>
-                    {selectedStartupForModal.riskFactor}
-                  </div>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={25}
+                  step={0.5}
+                  value={calcArr}
+                  onChange={(e) => setCalcArr(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#00c078]"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                  <span>$500K</span>
+                  <span>$10M</span>
+                  <span>$25M+</span>
                 </div>
               </div>
 
-              {/* Backers & Market Size */}
-              <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-                <div>
-                  <span className="text-slate-400 block">Total Addressable Market:</span>
-                  <span className="font-bold text-slate-800">{selectedStartupForModal.marketSize}</span>
+              {/* YoY Growth Rate Slider */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                    YoY Growth Velocity
+                  </span>
+                  <span className="text-emerald-600 font-bold text-sm">+{calcGrowth}%</span>
                 </div>
+                <input
+                  type="range"
+                  min={20}
+                  max={400}
+                  step={10}
+                  value={calcGrowth}
+                  onChange={(e) => setCalcGrowth(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                  <span>+20%</span>
+                  <span>+150%</span>
+                  <span>+400%</span>
+                </div>
+              </div>
+
+              {/* Result Benchmark Box */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <span className="text-slate-400 block">Lead Investors:</span>
-                  <span className="font-bold text-slate-800">{selectedStartupForModal.keyInvestors.join(', ')}</span>
+                  <div className="text-[11px] uppercase tracking-wider text-slate-500">
+                    Implied Valuation Multiple
+                  </div>
+                  <div className="text-xl font-black text-slate-900">
+                    {calculatedValuation.multiple}x ARR
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[11px] uppercase tracking-wider text-slate-500">
+                    Estimated Fair Valuation
+                  </div>
+                  <div className="text-2xl font-black text-[#00c078]">
+                    ${calculatedValuation.valuation}M
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Modal Footer Actions */}
-            <div className="bg-[#f8fafc] border-t border-slate-200 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => onToggleSave(selectedStartupForModal.id)}
-                  className={`px-3.5 py-2 rounded-lg border text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors ${
-                    savedIds.includes(selectedStartupForModal.id)
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
-                  }`}
-                >
-                  <Bookmark className="w-3.5 h-3.5" />
-                  <span>{savedIds.includes(selectedStartupForModal.id) ? 'Saved to Radar' : 'Save to Radar'}</span>
-                </button>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                {contactSuccessMessage ? (
-                  <span className="text-xs font-mono text-emerald-700 font-bold flex items-center gap-1">
-                    <Check className="w-4 h-4" /> Request dispatched to Bureau
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (onOpenContact) {
-                        onOpenContact();
-                      } else {
-                        setContactSuccessMessage(true);
-                      }
-                    }}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold tracking-wider transition-all shadow"
-                  >
-                    Request Partner Introduction
-                  </button>
-                )}
-              </div>
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                onClick={() => setCalculatorOpen(false)}
+                className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 transition-colors"
+              >
+                Close Calculator
+              </button>
             </div>
           </div>
         </div>

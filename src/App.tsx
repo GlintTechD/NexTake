@@ -14,6 +14,13 @@ import { ContactModal } from './components/ContactModal';
 import { PostingsPortal } from './components/PostingsPortal';
 import { StartupsView } from './components/StartupsView';
 
+
+import { TrendingTicker } from './components/TrendingTicker';
+
+import { StartupArticleView } from './components/StartupArticleView';
+
+
+
 const getInitialRoute = (): { screen: ScreenView; articleId: string } => {
   if (typeof window === 'undefined') {
     return { screen: 'home', articleId: 'dispatch-842' };
