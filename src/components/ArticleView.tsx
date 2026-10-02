@@ -55,6 +55,28 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
 
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
 
+  const refreshEngagement = async () => {
+    if (!articleId) return;
+
+    try {
+      const response = await fetch(`/api/public/article/${encodeURIComponent(articleId)}/engagement`);
+      if (!response.ok) return;
+      const payload = await response.json();
+      const nextComments = Array.isArray(payload.commentTexts) ? payload.commentTexts : [];
+
+      setCommentList(nextComments);
+      setArticle((current) => current ? {
+        ...current,
+        views: Number(payload.views ?? current.views ?? 0),
+        likes: Number(payload.likes ?? current.likes ?? 0),
+        comments: Number(payload.comments ?? nextComments.length ?? 0),
+        saves: Number(payload.saves ?? current.saves ?? 0),
+      } : current);
+    } catch {
+      // Ignore fetch failures; the next user action will retry from the server.
+    }
+  };
+
   /*
    * Load the selected article from Supabase with cleanup handling.
    */
@@ -96,7 +118,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               saves: Number(stats?.saves ?? 0),
             };
             setArticle(resolved);
-            setCommentList(stats?.commentTexts ?? []);
+            setCommentList(Array.isArray(stats?.commentTexts) ? stats.commentTexts : []);
             setIsSaved((savedIds ?? []).includes(articleId));
             setIsLiked(window.localStorage.getItem(`nextake-liked-${articleId}`) === 'true');
           } else {
@@ -109,7 +131,21 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'view' }),
-          }).catch(() => undefined);
+          })
+            .then(async (response) => {
+              if (!response.ok) return;
+              const payload = await response.json();
+              const nextComments = Array.isArray(payload.commentTexts) ? payload.commentTexts : [];
+              setArticle((current) => current ? {
+                ...current,
+                views: Number(payload.views ?? current.views ?? 0),
+                likes: Number(payload.likes ?? current.likes ?? 0),
+                comments: Number(payload.comments ?? nextComments.length ?? current.comments ?? 0),
+                saves: Number(payload.saves ?? current.saves ?? 0),
+              } : current);
+              setCommentList(nextComments);
+            })
+            .catch(() => undefined);
         }
       } catch (error) {
         console.error("Error loading article:", error);
@@ -276,12 +312,19 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
                 const nextState = !isSaved;
                 setIsSaved(nextState);
                 onToggleSave(article.id);
-                await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ action: nextState ? 'save' : 'unsave' }),
                 });
-                setArticle((current) => current ? { ...current, saves: Math.max(0, (current.saves ?? 0) + (nextState ? 1 : -1)) } : current);
+                if (response.ok) {
+                  const payload = await response.json();
+                  setArticle((current) => current ? {
+                    ...current,
+                    saves: Number(payload.saves ?? current.saves ?? 0),
+                  } : current);
+                }
+                await refreshEngagement();
               }}
               className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
                 isSaved
@@ -302,12 +345,19 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
                 } else {
                   window.localStorage.removeItem(`nextake-liked-${article.id}`);
                 }
-                await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ action: nextState ? 'like' : 'unlike' }),
                 });
-                setArticle((current) => current ? { ...current, likes: Math.max(0, (current.likes ?? 0) + (nextState ? 1 : -1)) } : current);
+                if (response.ok) {
+                  const payload = await response.json();
+                  setArticle((current) => current ? {
+                    ...current,
+                    likes: Number(payload.likes ?? current.likes ?? 0),
+                  } : current);
+                }
+                await refreshEngagement();
               }}
               className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
                 isLiked ? 'bg-rose-50 text-rose-700 border border-rose-300' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -468,7 +518,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-600">Comments</h2>
               <div className="mt-4 space-y-3">
                 {commentList.length > 0 ? (
-                  commentList.slice(0, 5).map((comment, index) => (
+                  [...commentList].slice(0, 5).map((comment, index) => (
                     <div key={`${comment}-${index}`} className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
                       {comment}
                     </div>
@@ -504,11 +554,16 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
 
                   if (response.ok) {
                     const payload = await response.json();
-                    setCommentList(payload.commentTexts ?? []);
-                    setArticle((current) => current ? { ...current, comments: Number(payload.comments ?? current.comments ?? 0) } : current);
+                    const nextComments = Array.isArray(payload.commentTexts) ? payload.commentTexts : [];
+                    setCommentList(nextComments);
+                    setArticle((current) => current ? {
+                      ...current,
+                      comments: Number(payload.comments ?? nextComments.length ?? current.comments ?? 0),
+                    } : current);
                   }
 
                   setCommentDraft('');
+                  await refreshEngagement();
                 }}
               >
                 <input

@@ -15,6 +15,7 @@ import {
   getContentById,
 } from './content-service';
 import { isPubliclyVisible, normalizeSlug } from './content';
+import { getLatestCommentsPage, normalizeComments } from './engagement';
 
 declare global {
   namespace Express {
@@ -98,15 +99,7 @@ try {
       likes: Number(engagement.likes ?? 0),
       comments: Number(engagement.comments ?? engagement.commentTexts?.length ?? 0),
       saves: Number(engagement.saves ?? 0),
-      commentTexts: Array.isArray(engagement.commentTexts) ? engagement.commentTexts.map(String) : [],
-    });
-  }
-} catch {
-}
-
-const persistArticleEngagement = () => {
-  fs.writeFileSync(
-    engagementFilePath,
+        commentTexts: normalizeComments(Array.isArray(engagement.commentTexts) ? engagement.commentTexts : []),
     JSON.stringify(Object.fromEntries(articleEngagement), null, 2),
     'utf8',
   );
@@ -521,6 +514,7 @@ app.get('/api/public/activity', async (_request, response) => {
 app.get('/api/public/article/:id/engagement', async (request, response) => {
   const articleId = request.params.id;
   const engagement = getOrCreateArticleEngagement(articleId);
+  const orderedComments = normalizeComments(engagement.commentTexts).slice().reverse();
 
   response.json({
     ok: true,
@@ -529,7 +523,10 @@ app.get('/api/public/article/:id/engagement', async (request, response) => {
     likes: engagement.likes,
     comments: engagement.comments,
     saves: engagement.saves,
-    commentTexts: engagement.commentTexts,
+    commentTexts: orderedComments,
+    commentPageSize: 5,
+    commentPageCount: Math.max(1, Math.ceil(orderedComments.length / 5)) || 0,
+    commentPage: 1,
   });
 });
 
@@ -584,7 +581,9 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
   if (action === 'comment') {
     const comment = String(request.body?.comment ?? '').trim();
     if (comment) {
-      engagement.commentTexts.push(comment);
+      const comments = normalizeComments(engagement.commentTexts);
+      comments.push(comment);
+      engagement.commentTexts = comments;
       engagement.comments = engagement.commentTexts.length;
       persistArticleEngagement();
       recordPublicActivity({
@@ -596,6 +595,7 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
     }
   }
 
+  const orderedComments = normalizeComments(engagement.commentTexts).slice().reverse();
   response.json({
     ok: true,
     id: articleId,
@@ -603,7 +603,10 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
     likes: engagement.likes,
     comments: engagement.comments,
     saves: engagement.saves,
-    commentTexts: engagement.commentTexts,
+    commentTexts: orderedComments,
+    commentPageSize: 5,
+    commentPageCount: Math.max(1, Math.ceil(orderedComments.length / 5)) || 0,
+    commentPage: 1,
   });
 });
 

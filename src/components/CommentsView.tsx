@@ -13,6 +13,8 @@ export const CommentsView: React.FC<CommentsViewProps> = ({
 }) => {
   const [comments, setComments] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   useEffect(() => {
     let isMounted = true;
@@ -21,7 +23,7 @@ export const CommentsView: React.FC<CommentsViewProps> = ({
       .then(async (response) => {
         if (!response.ok) return;
         const payload = await response.json();
-        if (isMounted) setComments(payload.commentTexts ?? []);
+        if (isMounted) setComments(Array.isArray(payload.commentTexts) ? payload.commentTexts : []);
       })
       .catch(() => undefined)
       .finally(() => {
@@ -32,6 +34,10 @@ export const CommentsView: React.FC<CommentsViewProps> = ({
       isMounted = false;
     };
   }, [articleId]);
+
+  const totalPages = Math.max(1, Math.ceil(comments.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleComments = comments.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <div className="min-h-screen bg-white px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
@@ -61,15 +67,43 @@ export const CommentsView: React.FC<CommentsViewProps> = ({
         {isLoading ? (
           <p className="text-sm text-slate-500">Loading comments...</p>
         ) : comments.length > 0 ? (
-          <div className="space-y-3">
-            {comments.map((comment, index) => (
-              <article
-                key={`${comment}-${index}`}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700"
-              >
-                {comment}
-              </article>
-            ))}
+          <div className="space-y-4">
+            <div className="space-y-3">
+              {visibleComments.map((comment, index) => (
+                <article
+                  key={`${comment}-${index}`}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700"
+                >
+                  {comment}
+                </article>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4">
+                <button
+                  type="button"
+                  onClick={() => setPage((value) => Math.max(1, value - 1))}
+                  disabled={safePage === 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+
+                <p className="text-xs font-mono text-slate-500">
+                  Page {safePage} of {totalPages}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                  disabled={safePage === totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <p className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
