@@ -186,15 +186,13 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
   const publishedDate =
     article.published_at ?? article.created_at ?? article.date ?? null;
 
-  const formattedDate =
-    article.date ||
-    (publishedDate
-      ? new Date(publishedDate).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : "Recently published");
+  const formattedDate = publishedDate
+    ? new Date(publishedDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : article.date || "Recently published";
 
   const articleCategory = article.category || "General";
   const articleAuthor = article.author || "Editorial Team";
