@@ -81,6 +81,7 @@ export interface ShortItem {
   likes: string;
   shares: string;
   thumbnail: string;
+  videoUrl?: string;
   videoType: 'silicon' | 'network' | 'energy' | 'quantum' | 'cyber';
   relatedArticleId?: string;
   relatedInterviewId?: string;

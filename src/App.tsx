@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenView } from './types';
+import { getRouteFromPath } from './lib/navigation';
 import { Navbar } from './components/Navbar';
 import { HomeFeed } from './components/HomeFeed';
 import { ArticleView } from './components/ArticleView';
@@ -13,45 +14,22 @@ import { DailyEditModal } from './components/DailyEditModal';
 import { ContactModal } from './components/ContactModal';
 import { PostingsPortal } from './components/PostingsPortal';
 import { StartupsView } from './components/StartupsView';
-
-
 import { TrendingTicker } from './components/TrendingTicker';
-
 import { StartupArticleView } from './components/StartupArticleView';
-
-
 
 const getInitialRoute = (): { screen: ScreenView; articleId: string } => {
   if (typeof window === 'undefined') {
     return { screen: 'home', articleId: 'dispatch-842' };
   }
 
-  const path = window.location.pathname;
-  if (path.startsWith('/article/') && path.endsWith('/comments')) {
-    const articleId = decodeURIComponent(path.slice('/article/'.length, -'/comments'.length));
-    return {
-      screen: articleId ? 'comments' : 'home',
-      articleId: articleId || 'dispatch-842',
-    };
-  }
-  if (path.startsWith('/article/')) {
-    const articleId = decodeURIComponent(path.slice('/article/'.length));
-    return {
-      screen: articleId ? 'article' : 'home',
-      articleId: articleId || 'dispatch-842',
-    };
-  }
-  if (path === '/explore') return { screen: 'explore', articleId: 'dispatch-842' };
-  if (path === '/shorts') return { screen: 'shorts', articleId: 'dispatch-842' };
-  if (path === '/interview') return { screen: 'interview', articleId: 'dispatch-842' };
-  if (path === '/startups') return { screen: 'startups', articleId: 'dispatch-842' };
-  return { screen: 'home', articleId: 'dispatch-842' };
+  return getRouteFromPath(window.location.pathname);
 };
 
 export default function App() {
   const initialRoute = getInitialRoute();
   const [currentScreen, setCurrentScreen] = useState<ScreenView>(initialRoute.screen);
   const [selectedArticleId, setSelectedArticleId] = useState<string>(initialRoute.articleId);
+  const [selectedStartupId, setSelectedStartupId] = useState<string>(initialRoute.articleId);
 
   const syncCurrentScreenFromPath = () => {
     const path = window.location.pathname;
@@ -72,6 +50,14 @@ export default function App() {
       setCurrentScreen('article');
       return;
     }
+    if (path.startsWith('/startup/')) {
+      const startupId = decodeURIComponent(path.slice('/startup/'.length));
+      if (startupId) {
+        setSelectedStartupId(startupId);
+      }
+      setCurrentScreen('startup-article');
+      return;
+    }
     if (path === '/explore') {
       setCurrentScreen('explore');
       return;
@@ -80,17 +66,17 @@ export default function App() {
       setCurrentScreen('shorts');
       return;
     }
-if (path === '/interview') {
-  setCurrentScreen('interview');
-  return;
-}
+    if (path === '/interview') {
+      setCurrentScreen('interview');
+      return;
+    }
 
-if (path === '/startups') {
-  setCurrentScreen('startups');
-  return;
-}
+    if (path === '/startups') {
+      setCurrentScreen('startups');
+      return;
+    }
 
-setCurrentScreen('home');
+    setCurrentScreen('home');
   };
 
   useEffect(() => {
@@ -151,6 +137,10 @@ setCurrentScreen('home');
       window.history.pushState({}, '', '/postings');
     } else if (screen === 'startups') {
       window.history.pushState({}, '', '/startups');
+    } else if (screen === 'startup-article') {
+      const startupId = param ?? selectedStartupId ?? 'paystack';
+      setSelectedStartupId(startupId);
+      window.history.pushState({}, '', `/startup/${startupId}`);
     }
 
     setCurrentScreen(screen);
@@ -238,13 +228,22 @@ setCurrentScreen('home');
           />
         )}
         {currentScreen === 'startups' && (
-  <StartupsView
-    onNavigate={handleNavigate}
-    savedIds={savedIds}
-    onToggleSave={handleToggleSave}
-    onOpenContact={() => setIsContactOpen(true)}
-  />
-)}
+          <StartupsView
+            onNavigate={handleNavigate}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
+            onOpenContact={() => setIsContactOpen(true)}
+          />
+        )}
+
+        {currentScreen === 'startup-article' && (
+          <StartupArticleView
+            onNavigate={handleNavigate}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
+            startupId={selectedStartupId}
+          />
+        )}
       </main>
 
       {/* Global Footer (shown on all screens except shorts stage) */}

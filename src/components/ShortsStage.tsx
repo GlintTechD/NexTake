@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScreenView, ShortItem } from '../types';
 import { SHORTS_LIST } from '../data/mockData';
+import { getPublishedTechMedia, getUnreplacedShorts, toPublishedShorts, type PublishedTechMedia } from '../lib/techMedia';
 import {
   ChevronLeft,
   Camera,
@@ -115,11 +116,17 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showPlayPulse, setShowPlayPulse] = useState(false);
   const [allComments, setAllComments] = useState<Record<string, Comment[]>>(DEFAULT_COMMENTS_MAP);
+  const [publishedMedia, setPublishedMedia] = useState<PublishedTechMedia[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const shorts = useMemo(() => [
+    ...toPublishedShorts(publishedMedia),
+    ...getUnreplacedShorts(publishedMedia),
+  ], [publishedMedia]);
 
-  const currentShort: ShortItem = SHORTS_LIST[currentIndex] || SHORTS_LIST[0];
+  const currentShort: ShortItem = shorts[currentIndex] || shorts[0];
   const isCurrentLiked = !!likedShorts[currentShort.id];
   const isCurrentDisliked = !!dislikedShorts[currentShort.id];
   const isSubscribed = !!subscribedChannels[currentShort.author];
@@ -140,15 +147,32 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
     setTimeout(() => setToastMessage(null), 2200);
   };
 
+  useEffect(() => {
+    let isMounted = true;
+    void getPublishedTechMedia().then((records) => {
+      if (isMounted) setPublishedMedia(records);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+    video.playbackRate = playbackSpeed;
+    if (isPlaying) void video.play().catch(() => setIsPlaying(false));
+    else video.pause();
+  }, [currentShort.videoUrl, isPlaying, isMuted, playbackSpeed]);
+
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % SHORTS_LIST.length);
+    setCurrentIndex((prev) => (prev + 1) % shorts.length);
     setProgress(0);
     setIsCommentsOpen(false);
     setIsMoreMenuOpen(false);
   };
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? SHORTS_LIST.length - 1 : prev - 1));
+    setCurrentIndex((prev) => (prev === 0 ? shorts.length - 1 : prev - 1));
     setProgress(0);
     setIsCommentsOpen(false);
     setIsMoreMenuOpen(false);
@@ -258,7 +282,7 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, isMuted, isCommentsOpen, isMoreMenuOpen]);
+  }, [currentIndex, isMuted, isCommentsOpen, isMoreMenuOpen, shorts.length]);
 
   // Touch swipe gestures on mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -279,17 +303,17 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
 
   // Auto-advancing video progress
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || currentShort.videoUrl) return;
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 60) {
+        if (prev >= currentShort.durationSeconds) {
           return 0;
         }
         return prev + 1;
       });
     }, 1000 / playbackSpeed);
     return () => clearInterval(interval);
-  }, [isPlaying, playbackSpeed, currentIndex]);
+  }, [isPlaying, playbackSpeed, currentIndex, currentShort.durationSeconds, currentShort.videoUrl]);
 
   // Animated background visual synthesizer on canvas
   useEffect(() => {
@@ -387,7 +411,7 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
             <ChevronUp className="w-6 h-6 group-hover:-translate-y-0.5 transition-transform" />
           </button>
           <div className="text-[11px] font-mono text-slate-400 font-bold text-center">
-            {currentIndex + 1} / {SHORTS_LIST.length}
+            {currentIndex + 1} / {shorts.length}
           </div>
           <button
             onClick={handleNext}
@@ -423,20 +447,32 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
             onClick={togglePlay}
             className="absolute inset-0 z-0 bg-[#070b12] cursor-pointer overflow-hidden"
           >
-            {/* Real Background Image from short item */}
-            <img
-              src={currentShort.thumbnail}
-              alt={currentShort.title}
-              className="w-full h-full object-cover opacity-50 brightness-95 filter contrast-110 scale-105 transition-transform duration-1000 ease-out"
-            />
+            {currentShort.videoUrl ? (
+              <video
+                ref={videoRef}
+                src={currentShort.videoUrl}
+                poster={currentShort.thumbnail}
+                playsInline
+                onTimeUpdate={(event) => setProgress(event.currentTarget.currentTime)}
+                onEnded={handleNext}
+                aria-label={currentShort.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <img
+                src={currentShort.thumbnail}
+                alt={currentShort.title}
+                className="w-full h-full object-cover opacity-50 brightness-95 filter contrast-110 scale-105 transition-transform duration-1000 ease-out"
+              />
+            )}
 
             {/* Kinetic animated visual overlay canvas */}
-            <canvas
+            {!currentShort.videoUrl && <canvas
               ref={canvasRef}
               width={380}
               height={760}
               className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-40 pointer-events-none"
-            />
+            />}
 
             {/* Gradient vignetting overlay for maximum contrast and high-signal text legibility */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/70 pointer-events-none"></div>
@@ -689,7 +725,7 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
             <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
               <div
                 className="h-full bg-white transition-all duration-300 ease-linear rounded-full"
-                style={{ width: `${(progress / 60) * 100}%` }}
+                style={{ width: `${Math.min(100, (progress / currentShort.durationSeconds) * 100)}%` }}
               ></div>
             </div>
           </div>

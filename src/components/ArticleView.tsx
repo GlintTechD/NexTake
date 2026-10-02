@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ScreenView } from "../types";
-import { getArticleById } from "../lib/supabase";
+import { ALL_HERO_ARTICLES } from "../data/mockData";
+import { getArticleById, getLatestArticles } from "../lib/supabase";
 
 import {
   Bookmark,
@@ -52,8 +53,39 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [commentList, setCommentList] = useState<string[]>([]);
+  const [relatedArticles, setRelatedArticles] = useState<Array<{
+    id: string;
+    title: string;
+    category: string;
+    description: string;
+    image?: string;
+    readTime: string;
+    type: string;
+    createdAt: string;
+    score: number;
+  }>>([]);
 
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("nextake-following");
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, boolean>;
+        setFollowingMap(parsed);
+      }
+    } catch {
+      // Ignore invalid saved state and fall back to empty selection.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("nextake-following", JSON.stringify(followingMap));
+    } catch {
+      // Ignore storage write failures in restricted environments.
+    }
+  }, [followingMap]);
 
   const refreshEngagement = async () => {
     if (!articleId) return;
@@ -166,10 +198,115 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
     };
   }, [articleId, savedIds]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRelatedArticles = async () => {
+      if (!articleId) {
+        if (isMounted) setRelatedArticles([]);
+        return;
+      }
+
+      const latestArticles = await getLatestArticles();
+      const fallback = Object.values(ALL_HERO_ARTICLES).map((item) => ({
+        id: item.id,
+        title: item.title,
+        category: item.category ?? "General",
+        description: item.subtitle ?? item.contentSections?.[0]?.paragraphs?.[0] ?? "Explore this related story.",
+        image: item.heroImage ?? "",
+        readTime: item.readTime ?? "5 min read",
+        type: "Dispatch",
+        createdAt: item.date ?? new Date().toISOString(),
+        score: 0,
+      }));
+
+      const categoryImageMap: Record<string, string> = {
+        "customer success": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+        product: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
+        "software engineering": "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
+        ai: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80",
+        fintech: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80",
+        cybersecurity: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+        hardware: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+        default: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+      };
+
+      const sourceArticles = latestArticles.length
+        ? latestArticles.map((item) => {
+            const normalizedCategory = (item.category ?? "General").toLowerCase();
+            const image = item.image ?? categoryImageMap[normalizedCategory] ?? categoryImageMap.default;
+
+            return {
+              id: item.id,
+              title: item.title,
+              category: item.category ?? "General",
+              description: item.description || "Explore this related story.",
+              image,
+              readTime: item.readTime || "5 min read",
+              type: item.type || "Dispatch",
+              createdAt: item.created_at || new Date().toISOString(),
+              score: 0,
+            };
+          })
+        : fallback;
+
+      const currentTitle = (article?.title ?? "").toLowerCase();
+      const currentCategory = (article?.category ?? "General").toLowerCase();
+      const currentAuthor = (article?.author ?? "").toLowerCase();
+      const categoryTokens = currentCategory
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean)
+        .filter((token) => token.length > 2 && !["and", "the", "for", "with", "from", "into", "over"].includes(token));
+      const titleKeywords = Array.from(
+        new Set(
+          currentTitle
+            .split(/[^a-z0-9]+/)
+            .filter(Boolean)
+            .filter((token) => token.length > 3 && !["openai", "that", "with", "this", "from", "have", "into", "your", "what", "when", "they", "will", "more"].includes(token))
+        )
+      );
+
+      const scoredArticles = sourceArticles
+        .filter((item) => item.id !== articleId)
+        .map((item) => {
+          const itemTitle = item.title.toLowerCase();
+          const itemCategory = item.category.toLowerCase();
+          let score = 0;
+
+          if (item.image) score += 6;
+          if (itemCategory === currentCategory) score += 8;
+          if (currentCategory && itemTitle.includes(currentCategory)) score += 3;
+          if (categoryTokens.some((token) => itemTitle.includes(token))) score += 2;
+
+          score += titleKeywords.reduce((total, keyword) => total + (itemTitle.includes(keyword) ? 2 : 0), 0);
+
+          if (currentAuthor && item.title.toLowerCase().includes(currentAuthor.toLowerCase().split(" ")[0])) score += 1;
+          if (item.category.toLowerCase().includes("ai") && currentCategory.includes("ai")) score += 1;
+          if (item.category.toLowerCase().includes("fintech") && currentCategory.includes("fintech")) score += 1;
+          if (item.category.toLowerCase().includes("cyber") && currentCategory.includes("cyber")) score += 1;
+
+          return { ...item, score };
+        })
+        .sort((a, b) => b.score - a.score || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 3);
+
+      if (isMounted) {
+        setRelatedArticles(scoredArticles);
+      }
+    };
+
+    loadRelatedArticles();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [articleId, article?.title, article?.category]);
+
   const toggleFollow = (name: string) => {
+    const nextValue = !followingMap[name];
     setFollowingMap((prev) => ({
       ...prev,
-      [name]: !prev[name],
+      [name]: nextValue,
     }));
   };
 
@@ -233,6 +370,24 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
   const articleCategory = article.category || "General";
   const articleAuthor = article.author || "Editorial Team";
 
+  const fallbackRelatedStories = Object.values(ALL_HERO_ARTICLES)
+    .filter((item) => item.id !== article.id)
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category ?? "General",
+      description: item.subtitle ?? item.contentSections?.[0]?.paragraphs?.[0] ?? "Explore this related story.",
+      image: item.heroImage ?? "",
+      readTime: item.readTime ?? "5 min read",
+      type: "Dispatch",
+      createdAt: item.date ?? new Date().toISOString(),
+      score: 0,
+    }))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
+
+  const displayedRelatedArticles = relatedArticles.length > 0 ? relatedArticles : fallbackRelatedStories;
+
   return (
     <div className="bg-white text-slate-900 min-h-screen pb-24">
       {/* =========================================
@@ -282,113 +437,6 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               {article.excerpt}
             </p>
           )}
-        </div>
-
-        {/* =========================================
-            AUTHOR METADATA BAR
-        ========================================== */}
-        <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-200 mb-8">
-          <div className="flex items-center space-x-3">
-            <img
-              src={article.avatar || "https://i.pravatar.cc/64?img=60"}
-              alt={articleAuthor}
-              className="w-9 h-9 rounded-full object-cover border border-slate-300"
-            />
-
-            <div>
-              <div className="text-xs font-mono font-bold text-slate-900">
-                {articleAuthor}
-              </div>
-
-              <div className="text-[11px] font-mono text-slate-500">
-                {formattedDate} • {articleReadTime}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 flex-wrap">
-            <button
-              onClick={async () => {
-                const nextState = !isSaved;
-                setIsSaved(nextState);
-                onToggleSave(article.id);
-                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: nextState ? 'save' : 'unsave' }),
-                });
-                if (response.ok) {
-                  const payload = await response.json();
-                  setArticle((current) => current ? {
-                    ...current,
-                    saves: Number(payload.saves ?? current.saves ?? 0),
-                  } : current);
-                }
-                await refreshEngagement();
-              }}
-              className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
-                isSaved
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
-                  : "bg-slate-950 text-white hover:bg-slate-800"
-              }`}
-            >
-              <Bookmark className="w-3.5 h-3.5 fill-current" />
-              <span>{isSaved ? "Saved" : "Save story"}</span>
-            </button>
-
-            <button
-              onClick={async () => {
-                const nextState = !isLiked;
-                setIsLiked(nextState);
-                if (nextState) {
-                  window.localStorage.setItem(`nextake-liked-${article.id}`, 'true');
-                } else {
-                  window.localStorage.removeItem(`nextake-liked-${article.id}`);
-                }
-                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: nextState ? 'like' : 'unlike' }),
-                });
-                if (response.ok) {
-                  const payload = await response.json();
-                  setArticle((current) => current ? {
-                    ...current,
-                    likes: Number(payload.likes ?? current.likes ?? 0),
-                  } : current);
-                }
-                await refreshEngagement();
-              }}
-              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
-                isLiked ? 'bg-rose-50 text-rose-700 border border-rose-300' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              <span>{isLiked ? 'Liked' : 'Like'}</span>
-              <span>{(article.likes ?? 0).toLocaleString()}</span>
-            </button>
-
-            <button
-              onClick={() => {
-                const articleUrl = `${window.location.origin}/article/${encodeURIComponent(article.id)}`;
-                if (navigator.clipboard?.writeText) {
-                  navigator.clipboard
-                    .writeText(articleUrl)
-                    .then(() => {
-                      alert("Article link copied to clipboard.");
-                    })
-                    .catch(() => {
-                      alert(`Share this article: ${articleUrl}`);
-                    });
-                } else {
-                  alert(`Share this article: ${articleUrl}`);
-                }
-              }}
-              className="p-1.5 rounded border border-slate-300 hover:bg-slate-50 text-slate-600 transition-colors"
-              title="Share"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-          </div>
         </div>
 
         {/* =========================================
@@ -694,6 +742,117 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
         </div>
 
         {/* =========================================
+            AUTHOR METADATA BAR
+        ========================================== */}
+        <div className="mt-16 flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-200 mb-8">
+          <div className="flex items-center space-x-3">
+            <img
+              src={article.avatar || "https://i.pravatar.cc/64?img=60"}
+              alt={articleAuthor}
+              className="w-9 h-9 rounded-full object-cover border border-slate-300"
+            />
+
+            <div>
+              <div className="text-xs font-mono font-bold text-slate-900">
+                {articleAuthor}
+              </div>
+
+              <div className="text-[11px] font-mono text-slate-500">
+                {formattedDate} • {articleReadTime}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 flex-wrap">
+            <button
+              onClick={async () => {
+                const nextState = !isSaved;
+                setIsSaved(nextState);
+                onToggleSave(article.id);
+                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: nextState ? 'save' : 'unsave' }),
+                });
+                if (response.ok) {
+                  const payload = await response.json();
+                  setArticle((current) => current ? {
+                    ...current,
+                    saves: Number(payload.saves ?? current.saves ?? 0),
+                  } : current);
+                }
+                await refreshEngagement();
+              }}
+              className={`inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
+                isSaved
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
+                  : "bg-slate-950 text-white hover:bg-slate-800"
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5 fill-current" />
+              <span>{isSaved ? "Saved" : "Save story"}</span>
+            </button>
+
+            <button
+              onClick={async () => {
+                const nextState = !isLiked;
+                setIsLiked(nextState);
+                setArticle((current) => current ? {
+                  ...current,
+                  likes: Math.max(0, Number(current.likes ?? 0) + (nextState ? 1 : -1)),
+                } : current);
+                if (nextState) {
+                  window.localStorage.setItem(`nextake-liked-${article.id}`, 'true');
+                } else {
+                  window.localStorage.removeItem(`nextake-liked-${article.id}`);
+                }
+                const response = await fetch(`/api/public/article/${encodeURIComponent(article.id)}/engagement`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: nextState ? 'like' : 'unlike' }),
+                });
+                if (response.ok) {
+                  const payload = await response.json();
+                  setArticle((current) => current ? {
+                    ...current,
+                    likes: Number(payload.likes ?? current.likes ?? 0),
+                  } : current);
+                }
+                await refreshEngagement();
+              }}
+              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
+                isLiked ? 'bg-rose-50 text-rose-700 border border-rose-300' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>{isLiked ? 'Liked' : 'Like'}</span>
+              <span>{(article.likes ?? 0).toLocaleString()}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                const articleUrl = `${window.location.origin}/article/${encodeURIComponent(article.id)}`;
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard
+                    .writeText(articleUrl)
+                    .then(() => {
+                      alert("Article link copied to clipboard.");
+                    })
+                    .catch(() => {
+                      alert(`Share this article: ${articleUrl}`);
+                    });
+                } else {
+                  alert(`Share this article: ${articleUrl}`);
+                }
+              }}
+              className="p-1.5 rounded border border-slate-300 hover:bg-slate-50 text-slate-600 transition-colors"
+              title="Share"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* =========================================
             GO DEEPER
         ========================================== */}
         <section className="mt-16 pt-12 border-t border-slate-200">
@@ -713,132 +872,58 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Related Article */}
-            <div
-              onClick={() => onNavigate("home")}
-              className="bg-slate-50 rounded-lg border border-slate-200 p-5 hover:border-slate-400 transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-3">
-                  <span className="text-slate-700 font-bold">
-                    [Latest articles]
-                  </span>
-                  <span>Explore</span>
-                </div>
-
-                <div className="aspect-video bg-slate-900 rounded overflow-hidden mb-3">
-                  {article.image ? (
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs font-mono">
-                      No image
-                    </div>
-                  )}
-                </div>
-
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
-                  Explore more published stories
-                </h3>
-
-                <p className="text-xs text-slate-500 line-clamp-2">
-                  Return to the latest stories and discover more published
-                  articles.
-                </p>
+            {displayedRelatedArticles.length === 0 ? (
+              <div className="md:col-span-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+                No related stories available right now.
               </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-200 flex items-center space-x-1 text-xs font-mono font-bold text-emerald-700 group-hover:underline">
-                <span>Read more stories</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
-
-            {/* Interview */}
-            <div
-              onClick={() => onNavigate("interview")}
-              className="bg-slate-50 rounded-lg border border-slate-200 p-5 hover:border-slate-400 transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-3">
-                  <span className="text-slate-700 font-bold">
-                    [Related interview]
-                  </span>
-                  <span>Video</span>
-                </div>
-
-                <div className="aspect-video bg-slate-900 rounded overflow-hidden mb-3 relative">
-                  <img
-                    src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80"
-                    alt="Interview"
-                    className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
-                  />
-
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-8 h-8 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center">
-                      <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+            ) : (
+              displayedRelatedArticles.map((related) => (
+                <div
+                  key={related.id}
+                  onClick={() => onNavigate("article", related.id)}
+                  className="bg-slate-50 rounded-lg border border-slate-200 p-5 hover:border-slate-400 transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-3">
+                      <span className="text-slate-700 font-bold">
+                        [{related.category}]
+                      </span>
+                      <span>{related.type}</span>
                     </div>
+
+                    <div className="aspect-video bg-slate-900 rounded overflow-hidden mb-3">
+                      {related.image ? (
+                        <img
+                          src={related.image}
+                          alt={related.title}
+                          className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs font-mono">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
+                      {related.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {related.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t border-slate-200 flex items-center justify-between text-xs font-mono font-bold text-emerald-700 group-hover:underline">
+                    <span>{related.readTime}</span>
+                    <span className="inline-flex items-center space-x-1">
+                      <span>Read more</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
                   </div>
                 </div>
-
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
-                  Explore our latest interviews
-                </h3>
-
-                <p className="text-xs text-slate-500 line-clamp-2">
-                  Watch conversations and interviews from the publication.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-200 flex items-center space-x-1 text-xs font-mono font-bold text-emerald-700 group-hover:underline">
-                <span>Watch conversation</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
-
-            {/* Shorts */}
-            <div
-              onClick={() => onNavigate("shorts")}
-              className="bg-slate-50 rounded-lg border border-slate-200 p-5 hover:border-slate-400 transition-all cursor-pointer group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-3">
-                  <span className="text-slate-700 font-bold">
-                    [Related short]
-                  </span>
-                  <span>Short</span>
-                </div>
-
-                <div className="aspect-video bg-slate-900 rounded overflow-hidden mb-3 relative">
-                  <img
-                    src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"
-                    alt="Technology short"
-                    className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
-                  />
-
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-8 h-8 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center">
-                      <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                    </div>
-                  </div>
-                </div>
-
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
-                  Watch the latest short-form stories
-                </h3>
-
-                <p className="text-xs text-slate-500 line-clamp-2">
-                  Get quick visual breakdowns of the latest stories.
-                </p>
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-200 flex items-center space-x-1 text-xs font-mono font-bold text-emerald-700 group-hover:underline">
-                <span>Play short</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -876,13 +961,16 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
 
                   <button
                     onClick={() => toggleFollow(ent.name)}
-                    className={`px-3 py-1.5 rounded text-xs font-mono font-bold transition-colors ${
+                    className={`px-3 py-1.5 rounded text-xs font-mono font-bold transition-colors border ${
                       followed
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-950 hover:bg-slate-800 text-white"
+                        ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                        : "bg-slate-950 hover:bg-slate-800 text-white border-slate-950"
                     }`}
                   >
-                    {ent.name} {followed ? "✓" : "+"}
+                    <span className="inline-flex items-center gap-2">
+                      <span>{ent.name}</span>
+                      <span className={`text-base leading-none ${followed ? "opacity-100" : "opacity-80"}`}>{followed ? "✓" : "+"}</span>
+                    </span>
                   </button>
                 </div>
               );

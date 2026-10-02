@@ -22,6 +22,7 @@ export interface InterviewItem {
   title: string;
   category: string;
   thumbnail: string;
+  videoUrl?: string;
   duration: string;
   durationSeconds: number;
   views: string;

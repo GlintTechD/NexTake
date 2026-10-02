@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ScreenView } from '../types';
 import { subscribeToNewsletter } from '../lib/newsletter';
 import { HeroSlideshow } from './HeroSlideshow';
+import { getPublishedTechMedia, getUnreplacedShorts, toPublishedShorts, type PublishedTechMedia } from '../lib/techMedia';
 import {
   FEATURED_ARTICLE,
   SHORTS_LIST,
@@ -124,6 +125,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   const [latestArticles, setLatestArticles] = useState<LatestArticle[]>([]);
   const [latestLoading, setLatestLoading] = useState(true);
   const [publishedBigStories, setPublishedBigStories] = useState<SupabaseArticle[]>([]);
+  const [publishedMedia, setPublishedMedia] = useState<PublishedTechMedia[]>([]);
 
   const [activeCategoryTab, setActiveCategoryTab] = useState("All");
 
@@ -222,6 +224,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    void getPublishedTechMedia().then((records) => {
+      if (isMounted) setPublishedMedia(records);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   const activeBigStory = (() => {
     if (publishedBigStories.length === 0) return BIG_STORY;
 
@@ -234,6 +244,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       meta: `By ${story.author ?? "NexTake Editorial"} • ${story.read_time ?? story.readTime ?? "5 min read"}`,
       title: story.title,
       description,
+      image: story.image ?? story.cover_image ?? story.cover_image_url ?? "",
       takeaways: [
         { num: "01", label: "What happened", text: description },
         { num: "02", label: "Why it matters", text: story.content ?? description },
@@ -353,10 +364,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             </div>
           ) : (
             dailyEditItems.map((item) => (
-              <div
+              <button
                 key={item.id}
-
-                className="bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
+                type="button"
+                onClick={() => onNavigate('article', item.id)}
+                className="text-left bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
+                aria-label={`Open full story: ${item.title}`}
               >
                 <div>
                   <div className="flex items-center justify-between text-xs font-mono mb-2">
@@ -382,7 +395,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   <span>{item.timeAgo}</span>
                   <span>{item.readTime}</span>
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>
@@ -412,7 +425,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
           {/* 5 Vertical Preview Reels */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {SHORTS_LIST.map((short) => (
+            {[...toPublishedShorts(publishedMedia), ...getUnreplacedShorts(publishedMedia)].map((short) => (
               <div
                 key={short.id}
                 onClick={() => onNavigate('shorts')}
@@ -531,75 +544,97 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               </div>
             </div>
 
-            {/* Right Map Graphic Simulation */}
+            {/* Right image / graphic */}
             <div className="lg:col-span-5">
               <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 p-4 aspect-[4/3] flex flex-col justify-between">
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                  <span className="text-emerald-400">Computational network</span>
-                  <span>Europe & Asia hubs</span>
-                </div>
+                {activeBigStory.image ? (
+                  <>
+                    <div className="absolute inset-0">
+                      <img
+                        src={activeBigStory.image}
+                        alt={activeBigStory.title}
+                        className="w-full h-full object-cover opacity-90"
+                      />
+                    </div>
 
-                {/* SVG Network Map Graphic */}
-                <div className="my-auto py-4 relative flex items-center justify-center">
-                  <svg
-                    viewBox="0 0 400 200"
-                    className="w-full h-auto text-emerald-400 stroke-current opacity-80"
-                    fill="none"
-                  >
-                    {/* Globe contours */}
-                    <path
-                      d="M 50 100 Q 100 20 200 20 Q 300 20 350 100 Q 300 180 200 180 Q 100 180 50 100 Z"
-                      strokeWidth="0.5"
-                      strokeDasharray="2 2"
-                      className="text-slate-700"
-                    />
-                    <path
-                      d="M 200 20 L 200 180 M 50 100 L 350 100"
-                      strokeWidth="0.5"
-                      strokeDasharray="3 3"
-                      className="text-slate-700"
-                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-slate-950/10" />
 
-                    {/* Nodes and Links */}
-                    <circle cx="120" cy="70" r="4" fill="#00f2aa" />
-                    <text x="130" y="73" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
-                      Paris • 24k H100
-                    </text>
+                    <div className="relative z-10 flex items-center justify-between text-[10px] font-mono text-slate-200">
+                      <span className="text-emerald-400">{activeBigStory.tag}</span>
+                      <span>Published brief</span>
+                    </div>
 
-                    <circle cx="280" cy="85" r="4" fill="#00f2aa" />
-                    <text x="290" y="88" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
-                      Tokyo • 40k H100
-                    </text>
+                    <div className="relative z-10 flex items-center justify-between text-[10px] font-mono text-slate-200 border-t border-slate-700/80 pt-2">
+                      <span>{activeBigStory.title}</span>
+                      <span className="text-emerald-400">Live</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                      <span className="text-emerald-400">Computational network</span>
+                      <span>Europe & Asia hubs</span>
+                    </div>
 
-                    <circle cx="170" cy="110" r="4" fill="#00f2aa" />
-                    <text x="180" y="113" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
-                      Dubai • 32k H100
-                    </text>
+                    <div className="my-auto py-4 relative flex items-center justify-center">
+                      <svg
+                        viewBox="0 0 400 200"
+                        className="w-full h-auto text-emerald-400 stroke-current opacity-80"
+                        fill="none"
+                      >
+                        <path
+                          d="M 50 100 Q 100 20 200 20 Q 300 20 350 100 Q 300 180 200 180 Q 100 180 50 100 Z"
+                          strokeWidth="0.5"
+                          strokeDasharray="2 2"
+                          className="text-slate-700"
+                        />
+                        <path
+                          d="M 200 20 L 200 180 M 50 100 L 350 100"
+                          strokeWidth="0.5"
+                          strokeDasharray="3 3"
+                          className="text-slate-700"
+                        />
 
-                    {/* Sovereign connection lines */}
-                    <path
-                      d="M 120 70 Q 200 60 280 85"
-                      stroke="#00f2aa"
-                      strokeWidth="1.5"
-                      strokeDasharray="4 2"
-                    />
-                    <path
-                      d="M 120 70 L 170 110"
-                      stroke="#00f2aa"
-                      strokeWidth="1.2"
-                    />
-                    <path
-                      d="M 170 110 L 280 85"
-                      stroke="#00f2aa"
-                      strokeWidth="1.2"
-                    />
-                  </svg>
-                </div>
+                        <circle cx="120" cy="70" r="4" fill="#00f2aa" />
+                        <text x="130" y="73" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
+                          Paris • 24k H100
+                        </text>
 
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-slate-800 pt-2">
-                  <span>Monograph dispatch #412</span>
-                  <span className="text-emerald-400">Federation live</span>
-                </div>
+                        <circle cx="280" cy="85" r="4" fill="#00f2aa" />
+                        <text x="290" y="88" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
+                          Tokyo • 40k H100
+                        </text>
+
+                        <circle cx="170" cy="110" r="4" fill="#00f2aa" />
+                        <text x="180" y="113" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
+                          Dubai • 32k H100
+                        </text>
+
+                        <path
+                          d="M 120 70 Q 200 60 280 85"
+                          stroke="#00f2aa"
+                          strokeWidth="1.5"
+                          strokeDasharray="4 2"
+                        />
+                        <path
+                          d="M 120 70 L 170 110"
+                          stroke="#00f2aa"
+                          strokeWidth="1.2"
+                        />
+                        <path
+                          d="M 170 110 L 280 85"
+                          stroke="#00f2aa"
+                          strokeWidth="1.2"
+                        />
+                      </svg>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-slate-800 pt-2">
+                      <span>Monograph dispatch #412</span>
+                      <span className="text-emerald-400">Federation live</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

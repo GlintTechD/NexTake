@@ -91,6 +91,14 @@ type ArticleEngagement = {
 const engagementFilePath = path.join(process.cwd(), 'server', '.engagement.json');
 const articleEngagement = new Map<string, ArticleEngagement>();
 
+const persistArticleEngagement = () => {
+  fs.writeFileSync(
+    engagementFilePath,
+    JSON.stringify(Object.fromEntries(articleEngagement), null, 2),
+    'utf8',
+  );
+};
+
 try {
   const storedEngagement = JSON.parse(fs.readFileSync(engagementFilePath, 'utf8')) as Record<string, ArticleEngagement>;
   for (const [articleId, engagement] of Object.entries(storedEngagement)) {
@@ -99,11 +107,12 @@ try {
       likes: Number(engagement.likes ?? 0),
       comments: Number(engagement.comments ?? engagement.commentTexts?.length ?? 0),
       saves: Number(engagement.saves ?? 0),
-        commentTexts: normalizeComments(Array.isArray(engagement.commentTexts) ? engagement.commentTexts : []),
-    JSON.stringify(Object.fromEntries(articleEngagement), null, 2),
-    'utf8',
-  );
-};
+      commentTexts: normalizeComments(Array.isArray(engagement.commentTexts) ? engagement.commentTexts : []),
+    });
+  }
+} catch {
+  // Start with empty engagement data when the file is missing or invalid.
+}
 
 const getOrCreateArticleEngagement = (articleId: string) => {
   const existing = articleEngagement.get(articleId);

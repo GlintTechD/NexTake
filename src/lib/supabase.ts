@@ -171,6 +171,7 @@ export interface LatestArticle {
   title: string;
   category: string;
   description: string;
+  image?: string;
   timeAgo: string;
   readTime: string;
   type: string;
@@ -197,6 +198,7 @@ export async function getLatestArticles(): Promise<LatestArticle[]> {
     title: article.title ?? "",
     category: article.category ?? "General",
     description: article.excerpt ?? article.description ?? "",
+    image: article.image ?? article.cover_image_url ?? "",
     timeAgo: formatTimeAgo(article.created_at),
     readTime: article.read_time ?? article.readTime ?? "3 min read",
     type: article.type ?? "Dispatches",
@@ -229,6 +231,28 @@ const buildMockArticle = (article: MockArticle): Article => ({
 
 export const resolvePublishedAt = (article: Partial<Article> | null | undefined) => article?.published_at ?? article?.created_at ?? article?.date ?? null;
 
+const buildDailyTipArticle = (tip: Record<string, any>): Article => {
+  const content = tip?.content ?? tip?.excerpt ?? "";
+  const wordCount = (content ?? "").trim().split(/\s+/).filter(Boolean).length;
+
+  return {
+    id: String(tip?.id ?? ""),
+    title: tip?.title ?? "Untitled story",
+    category: tip?.category ?? "General",
+    excerpt: content,
+    content,
+    author: tip?.author ?? "NexTake Desk",
+    avatar: tip?.avatar ?? "",
+    image: tip?.image ?? "",
+    date: tip?.published_at ?? tip?.created_at ?? null,
+    readTime: `${Math.max(1, Math.ceil(wordCount / 200))} min read`,
+    read_time: `${Math.max(1, Math.ceil(wordCount / 200))} min read`,
+    status: tip?.status ?? "published",
+    created_at: tip?.created_at ?? null,
+    published_at: tip?.published_at ?? tip?.created_at ?? null,
+  };
+};
+
 export async function getArticleById(id: string): Promise<Article | null> {
   if (!id) return null;
 
@@ -239,25 +263,40 @@ export async function getArticleById(id: string): Promise<Article | null> {
 
   if (!supabase) return null;
 
-  const { data, error } = await supabase
+  const { data: articleData, error: articleError } = await supabase
     .from("articles")
     .select("*")
     .eq("id", id)
     .eq("status", "published")
     .maybeSingle();
 
-  if (error) {
-    console.error("Error loading article by ID:", error);
+  if (articleError) {
+    console.error("Error loading article by ID:", articleError);
+  }
+
+  if (articleData) {
+    return {
+      ...(articleData as Article),
+      published_at: (articleData as Article).published_at ?? (articleData as Article).created_at ?? (articleData as Article).date ?? null,
+      created_at: (articleData as Article).created_at ?? (articleData as Article).published_at ?? (articleData as Article).date ?? null,
+    } as Article;
+  }
+
+  const { data: dailyTipData, error: dailyTipError } = await supabase
+    .from("daily_tips")
+    .select("*")
+    .eq("id", id)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (dailyTipError) {
+    console.error("Error loading Daily Edit story by ID:", dailyTipError);
     return null;
   }
 
-  if (!data) return null;
+  if (!dailyTipData) return null;
 
-  return {
-    ...(data as Article),
-    published_at: (data as Article).published_at ?? (data as Article).created_at ?? (data as Article).date ?? null,
-    created_at: (data as Article).created_at ?? (data as Article).published_at ?? (data as Article).date ?? null,
-  } as Article;
+  return buildDailyTipArticle(dailyTipData as Record<string, any>);
 }
 
 export async function getPublishedBigStories(): Promise<Article[]> {

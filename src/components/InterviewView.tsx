@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScreenView } from '../types';
 import { ALL_INTERVIEWS, InterviewItem, InterviewChapter, InterviewComment } from '../data/interviewData';
+import { getPublishedTechMedia, getUnreplacedInterviews, toInterviewItem, type PublishedTechMedia } from '../lib/techMedia';
 import {
   Play,
   Pause,
@@ -79,9 +80,15 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
   });
   const [commentInput, setCommentInput] = useState('');
   const [commentsMap, setCommentsMap] = useState<Record<string, InterviewComment[]>>({});
+  const [publishedMedia, setPublishedMedia] = useState<PublishedTechMedia[]>([]);
 
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const interviews = [
+    ...publishedMedia.filter((record) => record.media_type === 'interview').map((record) => toInterviewItem(record, ALL_INTERVIEWS[0].thumbnail)),
+    ...getUnreplacedInterviews(publishedMedia),
+  ];
 
   const categories = [
     'All',
@@ -97,9 +104,9 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
   ];
 
   const currentInterview: InterviewItem = useMemo(() => {
-    if (!activeInterviewId) return ALL_INTERVIEWS[0];
-    return ALL_INTERVIEWS.find((i) => i.id === activeInterviewId) || ALL_INTERVIEWS[0];
-  }, [activeInterviewId]);
+    if (!activeInterviewId) return interviews[0];
+    return interviews.find((i) => i.id === activeInterviewId) || interviews[0];
+  }, [activeInterviewId, publishedMedia]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -112,9 +119,27 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  useEffect(() => {
+    let isMounted = true;
+    void getPublishedTechMedia().then((records) => {
+      if (isMounted) setPublishedMedia(records);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+    video.volume = volume;
+    video.playbackRate = playbackSpeed;
+    if (isPlaying) void video.play().catch(() => setIsPlaying(false));
+    else video.pause();
+  }, [currentInterview.videoUrl, isPlaying, isMuted, volume, playbackSpeed]);
+
   // Filtered interviews for the Browse Grid View (Image 1)
   const filteredInterviews = useMemo(() => {
-    return ALL_INTERVIEWS.filter((item) => {
+    return interviews.filter((item) => {
       if (selectedCategoryChip === 'Live Broadcasts') {
         if (!item.isLive) return false;
       } else if (selectedCategoryChip !== 'All' && item.category !== selectedCategoryChip) {
@@ -133,7 +158,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
       }
       return true;
     });
-  }, [selectedCategoryChip, searchQuery]);
+  }, [selectedCategoryChip, searchQuery, publishedMedia]);
 
   // Comments for current video
   const activeComments = useMemo(() => {
@@ -147,7 +172,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
 
   // Playback timer
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || currentInterview.videoUrl) return;
     const interval = setInterval(() => {
       setCurrentSecond((prev) => {
         if (prev >= currentInterview.durationSeconds) {
@@ -203,10 +228,10 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
   };
 
   const handlePlayNext = () => {
-    const currentIdx = ALL_INTERVIEWS.findIndex((i) => i.id === currentInterview.id);
-    const nextIdx = (currentIdx + 1) % ALL_INTERVIEWS.length;
-    handleSelectInterview(ALL_INTERVIEWS[nextIdx]);
-    showToast(`Playing next: ${ALL_INTERVIEWS[nextIdx].guest.name}`);
+    const currentIdx = interviews.findIndex((i) => i.id === currentInterview.id);
+    const nextIdx = (currentIdx + 1) % interviews.length;
+    handleSelectInterview(interviews[nextIdx]);
+    showToast(`Playing next: ${interviews[nextIdx].guest.name}`);
   };
 
   const handleToggleLike = () => {
@@ -273,10 +298,15 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-    setCurrentSecond(Math.floor(percentage * currentInterview.durationSeconds));
+    const seekTo = Math.floor(percentage * currentInterview.durationSeconds);
+    if (videoRef.current && videoRef.current.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      videoRef.current.currentTime = seekTo;
+    }
+    setCurrentSecond(seekTo);
   };
 
   const handleChapterClick = (chapter: InterviewChapter) => {
+    if (videoRef.current) videoRef.current.currentTime = chapter.seconds;
     setCurrentSecond(chapter.seconds);
     setIsPlaying(true);
     showToast(`Jumped to ${chapter.time} • ${chapter.title}`);
@@ -492,20 +522,32 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
                   ref={videoContainerRef}
                   className="relative aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl group border border-slate-800"
                 >
-                  {/* Video Poster Image & Animation Canvas */}
-                  <img
-                    src={currentInterview.thumbnail}
-                    alt={currentInterview.title}
-                    className="w-full h-full object-cover opacity-85 group-hover:opacity-95 transition-opacity"
-                  />
+                  {currentInterview.videoUrl ? (
+                    <video
+                      ref={videoRef}
+                      src={currentInterview.videoUrl}
+                      poster={currentInterview.thumbnail}
+                      playsInline
+                      onTimeUpdate={(event) => setCurrentSecond(event.currentTarget.currentTime)}
+                      onEnded={() => { if (autoplayNext) handlePlayNext(); else setIsPlaying(false); }}
+                      aria-label={currentInterview.title}
+                      className="absolute inset-0 w-full h-full object-contain"
+                    />
+                  ) : (
+                    <img
+                      src={currentInterview.thumbnail}
+                      alt={currentInterview.title}
+                      className="w-full h-full object-cover opacity-85 group-hover:opacity-95 transition-opacity"
+                    />
+                  )}
 
                   {/* Dynamic Audio Visualizer Canvas */}
-                  <canvas
+                  {!currentInterview.videoUrl && <canvas
                     ref={canvasRef}
                     width={720}
                     height={360}
                     className="absolute inset-0 w-full h-full object-cover mix-blend-screen pointer-events-none"
-                  />
+                  />}
 
                   {/* Gradient Overlay for Player Controls */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
@@ -906,7 +948,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
 
                 {/* List of Recommended / Queued Interviews (Image 2 right rail) */}
                 <div className="space-y-3">
-                  {ALL_INTERVIEWS.filter((i) => i.id !== currentInterview.id).map((interview) => (
+                  {interviews.filter((i) => i.id !== currentInterview.id).map((interview) => (
                     <div
                       key={interview.id}
                       onClick={() => handleSelectInterview(interview)}
