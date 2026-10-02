@@ -12,7 +12,7 @@ import {
   Bookmark, 
   Sparkles 
 } from 'lucide-react';
-import logo from "../Pic/header.png";
+import logo from "../Pic/Logo.png";
 
 interface NavbarProps {
   currentScreen: ScreenView;
@@ -37,11 +37,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [logoSrc, setLogoSrc] = useState<string>(() => {
     return localStorage.getItem('nextake_custom_logo') || logo;
   });
+  const [logoWidth, setLogoWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('nextake_logo_width');
+    return saved ? Number(saved) : 180;
+  });
+  const [logoHeight, setLogoHeight] = useState<number>(() => {
+    const saved = localStorage.getItem('nextake_logo_height');
+    return saved ? Number(saved) : 60;
+  });
 
   useEffect(() => {
     const handleLogoUpdate = () => {
       const customLogo = localStorage.getItem('nextake_custom_logo');
+      const savedWidth = localStorage.getItem('nextake_logo_width');
+      const savedHeight = localStorage.getItem('nextake_logo_height');
+
       setLogoSrc(customLogo || logo);
+      if (savedWidth) setLogoWidth(Number(savedWidth));
+      if (savedHeight) setLogoHeight(Number(savedHeight));
     };
 
     window.addEventListener('nextake_logo_updated', handleLogoUpdate);
@@ -64,7 +77,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <img
                 src={logoSrc}
                 alt="Brand Logo"
-                className="h-auto w-auto max-h-10 sm:max-h-12 object-contain transition-all duration-200"
+                style={{ width: `${logoWidth}px`, height: `${logoHeight}px` }}
+                className="object-contain transition-all duration-200"
               />
             </span>
           </button>
