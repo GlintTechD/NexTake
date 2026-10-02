@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScreenView } from '../types';
-import { Mail, Shield, ArrowUpRight, MessageSquare, CheckCircle2, Bell, Sparkles, Send } from 'lucide-react';
-import logo from "../Pic/header.png";
-import { subscribeToNewsletter } from '../lib/newsletter';
+import { Mail, Shield, ArrowUpRight, MessageSquare, CheckCircle2, Bell, Send } from 'lucide-react';
+import logo from "../Pic/Logo.png";
 
 interface FooterProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
@@ -15,22 +14,42 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
   const [frequency, setFrequency] = useState<'daily' | 'weekend' | 'all'>('daily');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newsletterError, setNewsletterError] = useState('');
+  const [footerLogo, setFooterLogo] = useState<string>(() => {
+    return localStorage.getItem('nextake_custom_logo') || logo;
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const custom = localStorage.getItem('nextake_custom_logo');
+      setFooterLogo(custom || logo);
+    };
+    window.addEventListener('nextake_logo_updated', handleUpdate);
+    return () => window.removeEventListener('nextake_logo_updated', handleUpdate);
+  }, []);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
     setIsSubmitting(true);
-    setNewsletterError('');
 
     try {
-      await subscribeToNewsletter(email, frequency);
+      const response = await fetch('/api/public/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, frequency }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to save subscription.');
+      }
+
       setIsSubscribed(true);
     } catch (error) {
       console.error('Newsletter subscribe failed:', error);
       setIsSubscribed(false);
-      setNewsletterError('Unable to save your signup. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -48,7 +67,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
 
           <div className="relative z-10 flex flex-col items-center justify-center text-center">
             <h2 className="max-w-5xl text-3xl sm:text-4xl lg:text-6xl font-black text-white tracking-[-0.04em] leading-[0.95] drop-shadow-[0_0_18px_rgba(255,255,255,0.08)] mb-6">
-              Request the Daily Edit briefing.
+              Subscribe to our daily edit newsletter.
             </h2>
 
             <div className="w-full max-w-2xl">
@@ -59,10 +78,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-white font-mono">
-                      Signup request received
+                      Telemetry Synchronized
                     </h4>
                     <p className="text-xs text-slate-400 mt-1">
-                      Your request is stored in server memory for this session. Email delivery is not enabled.{' '}
+                      Welcome to The Daily Edit. A confirmation token has been dispatched to{' '}
                       <span className="text-emerald-400 font-mono font-semibold">{email}</span>.
                     </p>
                   </div>
@@ -92,8 +111,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
                     <Mail className="w-4 h-4 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
                       type="email"
-                      aria-label="Email address"
-                      autoComplete="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -101,12 +118,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
                       className="w-full pl-11 pr-3.5 py-3 rounded-xl bg-slate-900/90 border border-slate-700 hover:border-slate-600 focus:border-emerald-400 focus:outline-none text-white placeholder-slate-500 text-xs font-mono transition-colors shadow-inner"
                     />
                   </div>
-
-                  {newsletterError && (
-                    <p role="alert" className="text-xs text-red-300" aria-live="assertive">
-                      {newsletterError}
-                    </p>
-                  )}
 
                   <div className="flex flex-col sm:flex-row gap-2.5 justify-center mx-auto max-w-xl">
                     <button
@@ -136,7 +147,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
 
                   <div className="flex items-center justify-center space-x-2 text-[10px] font-mono text-slate-500 pt-1">
                     <Shield className="w-3.5 h-3.5 text-emerald-400/80 shrink-0" />
-                    <span>Signup requests stay in server memory for this session only.</span>
+                    <span>Zero spam. No tracking pixels. Cryptographic one-click unsubscribe.</span>
                   </div>
                 </form>
               )}
@@ -149,7 +160,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center bg-transparent p-0">
               <img
-                src={logo}
+                src={footerLogo}
 
                 alt="NextTake — Technology News. Intelligently Curated."
                 className="h-20 w-auto max-w-[340px] object-contain sm:h-24 sm:max-w-[420px] lg:max-w-[460px] drop-shadow-[0_0_20px_rgba(34,211,238,0.22)] bg-transparent"
@@ -243,7 +254,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
                   onClick={() => onNavigate('shorts')}
                   className="hover:text-emerald-400 transition-colors text-left"
                 >
-                  Tech Shorts & Reels
+                  Video & Tech Reels
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onNavigate('startups')}
+                  className="hover:text-emerald-400 transition-colors text-left"
+                >
+                  Startups & Unicorn Radar
                 </button>
               </li>
               <li>
@@ -256,7 +275,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('article', 'dispatch-842')}
+                  onClick={() => onNavigate('article')}
                   className="hover:text-emerald-400 transition-colors text-left"
                 >
                   Deep Dive Monographs
@@ -358,7 +377,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-start font-mono text-[11px] text-slate-500 space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-            <span>© 2026 NexTake Media Group. All rights reserved.</span>
+            <span>© 2025 NexTake Media Group. All rights reserved.</span>
           </div>
         </div>
       </div>

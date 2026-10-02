@@ -1,4 +1,4 @@
-export type ScreenView = 'home' | 'article' | 'explore' | 'shorts' | 'interview' | 'startups' | 'startup-article' | 'comments' | 'postings';
+export type ScreenView = 'home' | 'article' | 'explore' | 'shorts' | 'interview' | 'startups' | 'startup-article' | 'comments' | 'postings' | 'events';
 
 export interface HeroSlideStory {
   id: string;
@@ -445,4 +445,29 @@ export interface StartupProfile {
     publicationDate: string;
     citationNote?: string;
   }[];
+}
+
+export type EventRegion = 'Africa' | 'Europe' | 'Americas' | 'Middle East';
+
+/** A hardcoded entry on the Events page (see src/data/eventsData.ts). */
+export interface TechEvent {
+  id: string;
+  name: string;
+  /** Short label shown above the title, e.g. "Developer community". */
+  category: string;
+  /** First day of the event as an ISO calendar date (YYYY-MM-DD). */
+  startDate: string;
+  /** Last day of the event as an ISO calendar date (YYYY-MM-DD). */
+  endDate: string;
+  venue?: string;
+  city: string;
+  country: string;
+  region: EventRegion;
+  summary: string;
+  /** The organiser's official event page. */
+  url: string;
+  /** File name (without extension) of a .jpg in src/Pic/events. */
+  image: string;
+  /** Shown as the large lead card when no region filter is applied. */
+  featured?: boolean;
 }

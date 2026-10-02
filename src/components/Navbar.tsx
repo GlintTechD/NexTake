@@ -12,7 +12,7 @@ import {
   Bookmark, 
   Sparkles 
 } from 'lucide-react';
-import logo from "../Pic/header.png";
+import logo from "../Pic/Logo.png";
 
 interface NavbarProps {
   currentScreen: ScreenView;
@@ -37,11 +37,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [logoSrc, setLogoSrc] = useState<string>(() => {
     return localStorage.getItem('nextake_custom_logo') || logo;
   });
+  const [logoWidth, setLogoWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('nextake_logo_width');
+    return saved ? Number(saved) : 180;
+  });
+  const [logoHeight, setLogoHeight] = useState<number>(() => {
+    const saved = localStorage.getItem('nextake_logo_height');
+    return saved ? Number(saved) : 60;
+  });
 
   useEffect(() => {
     const handleLogoUpdate = () => {
       const customLogo = localStorage.getItem('nextake_custom_logo');
+      const savedWidth = localStorage.getItem('nextake_logo_width');
+      const savedHeight = localStorage.getItem('nextake_logo_height');
+
       setLogoSrc(customLogo || logo);
+      if (savedWidth) setLogoWidth(Number(savedWidth));
+      if (savedHeight) setLogoHeight(Number(savedHeight));
     };
 
     window.addEventListener('nextake_logo_updated', handleLogoUpdate);
@@ -64,7 +77,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <img
                 src={logoSrc}
                 alt="Brand Logo"
-                className="h-auto w-auto max-h-10 sm:max-h-12 object-contain transition-all duration-200"
+                style={{ width: `${logoWidth}px`, height: `${logoHeight}px` }}
+                className="object-contain transition-all duration-200"
               />
             </span>
           </button>
@@ -90,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
             onClick={() => { onNavigate('explore'); setIsMenuOpen(false); }}
               className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
-                currentScreen === ('news' as ScreenView) ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+                currentScreen === 'explore' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
               } w-full lg:w-auto justify-start text-left`}
             >
               <Newspaper className="w-3.5 h-3.5" />
@@ -150,12 +164,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>News Letter</span>
             </button>
 
-            {/* Explore / Search */}
+            {/* Events */}
             <button
-              onClick={() => { onNavigate('explore'); setIsMenuOpen(false); }}
-              aria-label="Explore"
+              onClick={() => { onNavigate('events'); setIsMenuOpen(false); }}
               className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
-                currentScreen === 'explore' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+                currentScreen === 'events' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
               } w-full lg:w-auto justify-start text-left`}
             >
               <Search className="w-3.5 h-3.5" />

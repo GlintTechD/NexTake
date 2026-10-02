@@ -16,3 +16,10 @@ test('maps startup routes without ids back to the startups list', () => {
     articleId: 'dispatch-842',
   });
 });
+
+test('maps the events route to the events screen', () => {
+  assert.deepStrictEqual(getRouteFromPath('/events'), {
+    screen: 'events',
+    articleId: 'dispatch-842',
+  });
+});

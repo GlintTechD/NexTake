@@ -337,7 +337,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
       {/* ========================================================================= */}
       {/* 1. TOP YOUTUBE DESKTOP HEADER (Matches Images 1 & 2) */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 h-14 px-4 flex items-center justify-between shadow-xs">
+      {/* Sticks directly under the global nav (h-16) and one z-level below it, so it never covers the nav links or the mobile menu. */}
+      <header className="sticky top-16 z-[35] bg-white border-b border-slate-200 h-14 px-4 flex items-center justify-between shadow-xs">
         {/* Left Side: Hamburger & Guide Toggle */}
         <div className="flex items-center space-x-4">
           <button
