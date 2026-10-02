@@ -32,6 +32,7 @@ interface Article {
   read_time?: string;
   status?: string;
   created_at?: string;
+  published_at?: string;
   heroAperture?: string;
   views?: number;
   likes?: number;
@@ -182,10 +183,13 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
   const articleReadTime =
     article.readTime || article.read_time || "5 min read";
 
+  const publishedDate =
+    article.published_at ?? article.created_at ?? article.date ?? null;
+
   const formattedDate =
     article.date ||
-    (article.created_at
-      ? new Date(article.created_at).toLocaleDateString("en-US", {
+    (publishedDate
+      ? new Date(publishedDate).toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",
           day: "numeric",

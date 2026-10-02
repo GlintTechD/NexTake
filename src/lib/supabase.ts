@@ -33,6 +33,7 @@ export interface Article {
   topic?: string;
   status?: string;
   created_at?: string;
+  published_at?: string;
   heroAperture?: string;
   hero_priority?: number | null;
 }
@@ -222,8 +223,11 @@ const buildMockArticle = (article: MockArticle): Article => ({
   date: article.date,
   readTime: article.readTime,
   status: "published",
+  published_at: new Date(article.date ?? Date.now()).toISOString(),
   heroAperture: article.heroAperture,
 });
+
+export const resolvePublishedAt = (article: Partial<Article> | null | undefined) => article?.published_at ?? article?.created_at ?? article?.date ?? null;
 
 export async function getArticleById(id: string): Promise<Article | null> {
   if (!id) return null;
@@ -247,7 +251,13 @@ export async function getArticleById(id: string): Promise<Article | null> {
     return null;
   }
 
-  return data as Article | null;
+  if (!data) return null;
+
+  return {
+    ...(data as Article),
+    published_at: (data as Article).published_at ?? (data as Article).created_at ?? (data as Article).date ?? null,
+    created_at: (data as Article).created_at ?? (data as Article).published_at ?? (data as Article).date ?? null,
+  } as Article;
 }
 
 export async function getPublishedBigStories(): Promise<Article[]> {
