@@ -358,7 +358,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-start font-mono text-[11px] text-slate-500 space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-            <span>© 2025 Next Edit Media Group. All rights reserved.</span>
+            <span>© 2026 NexTake Media Group. All rights reserved.</span>
           </div>
         </div>
       </div>
