@@ -1,8 +1,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { FEATURED_ARTICLE } from "../data/mockData";
+import { FEATURED_ARTICLE, ALL_HERO_ARTICLES, type Article as MockArticle } from "../data/mockData";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+const runtimeEnv =
+  typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : ({} as Record<string, string | undefined>);
+
+const supabaseUrl = (runtimeEnv.VITE_SUPABASE_URL ?? "").trim();
+const supabaseAnonKey = (runtimeEnv.VITE_SUPABASE_ANON_KEY ?? "").trim();
 
 export const supabase: SupabaseClient | null =
   supabaseUrl && supabaseAnonKey
@@ -140,7 +143,8 @@ export interface DailyEditSettings {
 }
 
 export async function getDailyEditSettings(): Promise<DailyEditSettings | null> {
-  if (!supabase || import.meta.env.VITE_ENABLE_DAILY_EDIT_SETTINGS !== "true") return null;
+  const dailyEditEnabled = (runtimeEnv.VITE_ENABLE_DAILY_EDIT_SETTINGS ?? "").trim() === "true";
+  if (!supabase || !dailyEditEnabled) return null;
 
   const { data, error } = await supabase
     .from("daily_edit_settings")
@@ -204,26 +208,29 @@ export async function getLatestArticles(): Promise<LatestArticle[]> {
 // Single Article
 // --------------------------------------
 
+const buildMockArticle = (article: MockArticle): Article => ({
+  id: article.id,
+  title: article.title,
+  category: article.category,
+  excerpt: article.subtitle,
+  content: article.contentSections
+    ?.flatMap((section) => section.paragraphs ?? [])
+    .join("\n\n"),
+  author: article.author?.name,
+  avatar: article.author?.avatar,
+  image: article.heroImage,
+  date: article.date,
+  readTime: article.readTime,
+  status: "published",
+  heroAperture: article.heroAperture,
+});
+
 export async function getArticleById(id: string): Promise<Article | null> {
   if (!id) return null;
 
-  if (id === FEATURED_ARTICLE.id) {
-    return {
-      id: FEATURED_ARTICLE.id,
-      title: FEATURED_ARTICLE.title,
-      category: FEATURED_ARTICLE.category,
-      excerpt: FEATURED_ARTICLE.subtitle,
-      content: FEATURED_ARTICLE.contentSections
-        .flatMap((section) => section.paragraphs)
-        .join("\n\n"),
-      author: FEATURED_ARTICLE.author.name,
-      avatar: FEATURED_ARTICLE.author.avatar,
-      image: FEATURED_ARTICLE.heroImage,
-      date: FEATURED_ARTICLE.date,
-      readTime: FEATURED_ARTICLE.readTime,
-      status: "published",
-      heroAperture: FEATURED_ARTICLE.heroAperture,
-    };
+  const localArticle = ALL_HERO_ARTICLES[id] ?? (id === FEATURED_ARTICLE.id ? FEATURED_ARTICLE : null);
+  if (localArticle) {
+    return buildMockArticle(localArticle);
   }
 
   if (!supabase) return null;

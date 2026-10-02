@@ -76,8 +76,17 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
 
         if (isMounted) {
           if (data) {
-            const statsResponse = await fetch(`/api/public/article/${encodeURIComponent(articleId)}/engagement`);
-            const stats = statsResponse.ok ? await statsResponse.json() : null;
+            let stats: Record<string, any> | null = null;
+            try {
+              const statsResponse = await fetch(`/api/public/article/${encodeURIComponent(articleId)}/engagement`);
+              const contentType = statsResponse.headers.get('content-type') ?? '';
+              if (statsResponse.ok && contentType.includes('application/json')) {
+                stats = await statsResponse.json();
+              }
+            } catch {
+              stats = null;
+            }
+
             const resolved = {
               ...(data as Article),
               views: Number(stats?.views ?? (data as Article).views ?? 0),
