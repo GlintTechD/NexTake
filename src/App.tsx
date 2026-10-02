@@ -14,6 +14,7 @@ import { DailyEditModal } from './components/DailyEditModal';
 import { ContactModal } from './components/ContactModal';
 import { PostingsPortal } from './components/PostingsPortal';
 import { StartupsView } from './components/StartupsView';
+import { EventsView } from './components/EventsView';
 import { TrendingTicker } from './components/TrendingTicker';
 import { StartupArticleView } from './components/StartupArticleView';
 
@@ -73,6 +74,11 @@ export default function App() {
 
     if (path === '/startups') {
       setCurrentScreen('startups');
+      return;
+    }
+
+    if (path === '/events') {
+      setCurrentScreen('events');
       return;
     }
 
@@ -137,6 +143,8 @@ export default function App() {
       window.history.pushState({}, '', '/postings');
     } else if (screen === 'startups') {
       window.history.pushState({}, '', '/startups');
+    } else if (screen === 'events') {
+      window.history.pushState({}, '', '/events');
     } else if (screen === 'startup-article') {
       const startupId = param ?? selectedStartupId ?? 'paystack';
       setSelectedStartupId(startupId);
@@ -234,6 +242,10 @@ export default function App() {
             onToggleSave={handleToggleSave}
             onOpenContact={() => setIsContactOpen(true)}
           />
+        )}
+
+        {currentScreen === 'events' && (
+          <EventsView onOpenContact={() => setIsContactOpen(true)} />
         )}
 
         {currentScreen === 'startup-article' && (

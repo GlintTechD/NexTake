@@ -104,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
             onClick={() => { onNavigate('explore'); setIsMenuOpen(false); }}
               className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
-                currentScreen === ('news' as ScreenView) ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+                currentScreen === 'explore' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
               } w-full lg:w-auto justify-start text-left`}
             >
               <Newspaper className="w-3.5 h-3.5" />
@@ -164,12 +164,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>News Letter</span>
             </button>
 
-            {/* Explore / Search */}
+            {/* Events */}
             <button
-              onClick={() => { onNavigate('explore'); setIsMenuOpen(false); }}
-              aria-label="Explore"
+              onClick={() => { onNavigate('events'); setIsMenuOpen(false); }}
               className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
-                currentScreen === 'explore' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+                currentScreen === 'events' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
               } w-full lg:w-auto justify-start text-left`}
             >
               <Search className="w-3.5 h-3.5" />

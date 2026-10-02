@@ -50,5 +50,9 @@ export const getRouteFromPath = (path: string): RouteState => {
     return { screen: 'startups', articleId: 'dispatch-842' };
   }
 
+  if (path === '/events') {
+    return { screen: 'events', articleId: 'dispatch-842' };
+  }
+
   return { screen: 'home', articleId: 'dispatch-842' };
 };
