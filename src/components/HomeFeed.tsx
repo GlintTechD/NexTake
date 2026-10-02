@@ -394,7 +394,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
             <div>
               <h2 className="text-2xl font-black tracking-tight text-white">
-                Next Edit Shorts
+                NexTake Shorts
               </h2>
               <p className="text-xs text-slate-400 font-mono">
                 Tech stories in under 60 seconds.

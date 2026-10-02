@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScreenView } from '../types';
 import { Mail, Shield, ArrowUpRight, MessageSquare, CheckCircle2, Bell, Sparkles, Send } from 'lucide-react';
-import logo from "../Pic/Logo.png";
+import logo from "../Pic/header.png";
 import { subscribeToNewsletter } from '../lib/newsletter';
 
 interface FooterProps {
