@@ -102,9 +102,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* News / Tech Stories */}
             <button
-            onClick={() => { onNavigate('explore'); setIsMenuOpen(false); }}
+            onClick={() => { onNavigate('latest'); setIsMenuOpen(false); }}
               className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
-                currentScreen === 'explore' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+                currentScreen === 'latest' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
               } w-full lg:w-auto justify-start text-left`}
             >
               <Newspaper className="w-3.5 h-3.5" />

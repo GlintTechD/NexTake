@@ -187,44 +187,6 @@ const removeStoredContent = async (id: string) => {
   return contentStore.delete(id);
 };
 
-const seededItems: ContentItem[] = [
-  {
-    id: 'seed-1',
-    title: 'The price of autonomy is trust operator design',
-    slug: 'price-of-autonomy-trust-operator-design',
-    description: 'How high-trust AI operating models are reshaping enterprise coordination.',
-    body: 'A new wave of operators is building trust architectures around edge governance, review bodies, and transparent audit trails.',
-    contentType: 'blog',
-    status: 'published',
-    author: 'Elena Vance',
-    category: 'AI',
-    tags: ['ai', 'governance', 'operators'],
-    coverImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    publishedAt: new Date().toISOString(),
-    featured: true,
-    featuredPriority: 100,
-  },
-  {
-    id: 'seed-2',
-    title: 'African fintech rails are hitting real throughput',
-    slug: 'african-fintech-rails-real-throughput',
-    description: 'New settlement corridors are reducing friction for digital trade and remittances.',
-    body: 'Cross-border liquidity APIs and local-clearing partners are reducing settlement delays for new corridor pilots.',
-    contentType: 'news',
-    status: 'scheduled',
-    author: 'Marcus Brody',
-    category: 'Fintech',
-    tags: ['fintech', 'payments', 'africa'],
-    scheduledFor: new Date(Date.now() + 3600000).toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
-seededItems.forEach((item) => contentStore.set(item.id, item));
-
 const parseCookieHeader = (cookieHeader = '') => {
   const map = new Map<string, string>();
   for (const rawCookie of (cookieHeader ?? '').split(';')) {
@@ -653,10 +615,15 @@ app.get('/api/public/content/:slug', async (request, response) => {
   try {
     const slug = request.params.slug;
     const item = isDatabaseEnabled()
-      ? await getContentBySlug(slug)
-      : Array.from(contentStore.values()).find((entry) => entry.slug === slug) ?? null;
+      ? (await getContentBySlug(slug)) ?? (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug) ? await getContentById(slug) : null)
+      : Array.from(contentStore.values()).find((entry) => entry.slug === slug || entry.id === slug) ?? null;
 
-    if (!item || !isPubliclyVisible(item.status, item.scheduledFor, item.publishedAt)) {
+    const record = item as (ContentItem & { scheduled_for?: string; published_at?: string }) | null;
+    if (!record || !isPubliclyVisible(
+      record.status,
+      record.scheduledFor ?? record.scheduled_for,
+      record.publishedAt ?? record.published_at,
+    )) {
       response.status(404).json({ ok: false, message: 'Content not found.' });
       return;
     }

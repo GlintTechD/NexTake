@@ -34,6 +34,10 @@ export const getRouteFromPath = (path: string): RouteState => {
     };
   }
 
+  if (path === '/latest') {
+    return { screen: 'latest', articleId: 'dispatch-842' };
+  }
+
   if (path === '/explore') {
     return { screen: 'explore', articleId: 'dispatch-842' };
   }
