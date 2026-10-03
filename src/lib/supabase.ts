@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { FEATURED_ARTICLE, ALL_HERO_ARTICLES, type Article as MockArticle } from "../data/mockData";
+import { FEATURED_ARTICLE, ALL_HERO_ARTICLES } from "../data/mockData";
+import type { Article as MockArticle } from "../types";
 
 const runtimeEnv =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : ({} as Record<string, string | undefined>);
@@ -36,6 +37,20 @@ export interface Article {
   published_at?: string;
   heroAperture?: string;
   hero_priority?: number | null;
+  body?: string;
+  content_type?: string;
+  contentType?: string;
+  cover_image?: string;
+  cover_image_url?: string;
+  coverImage?: string;
+  coverImageUrl?: string;
+  image_url?: string;
+  imageUrl?: string;
+  featured_image?: string;
+  publishedAt?: string;
+  createdAt?: string;
+  slug?: string;
+  tags?: string[];
 }
 
 // --------------------------------------
@@ -50,6 +65,7 @@ export interface DailyEditItem {
   readTime: string;
   title: string;
   description: string;
+  image?: string;
 }
 
 export async function getDailyEditItems(): Promise<DailyEditItem[]> {
@@ -78,7 +94,8 @@ export async function getDailyEditItems(): Promise<DailyEditItem[]> {
       timeAgo: formatTimeAgo(tip.published_at ?? tip.created_at),
       readTime,
       title: tip.title ?? "",
-      description: tip.content ?? "",
+      description: tip.content ?? tip.excerpt ?? tip.description ?? "",
+      image: tip.image || tip.imageUrl || tip.image_url || tip.coverImage || tip.coverImageUrl || tip.cover_image || tip.cover_image_url || tip.featured_image || "",
     };
   });
 }
@@ -198,7 +215,7 @@ export async function getLatestArticles(): Promise<LatestArticle[]> {
     title: article.title ?? "",
     category: article.category ?? "General",
     description: article.excerpt ?? article.description ?? "",
-    image: article.image ?? article.cover_image_url ?? "",
+    image: article.image || article.imageUrl || article.image_url || article.coverImage || article.coverImageUrl || article.cover_image || article.cover_image_url || article.featured_image || "",
     timeAgo: formatTimeAgo(article.created_at),
     readTime: article.read_time ?? article.readTime ?? "3 min read",
     type: article.type ?? "Dispatches",
@@ -243,7 +260,7 @@ const buildDailyTipArticle = (tip: Record<string, any>): Article => {
     content,
     author: tip?.author ?? "NexTake Desk",
     avatar: tip?.avatar ?? "",
-    image: tip?.image ?? "",
+    image: tip?.image || tip?.imageUrl || tip?.image_url || tip?.coverImage || tip?.coverImageUrl || tip?.cover_image || tip?.cover_image_url || tip?.featured_image || "",
     date: tip?.published_at ?? tip?.created_at ?? null,
     readTime: `${Math.max(1, Math.ceil(wordCount / 200))} min read`,
     read_time: `${Math.max(1, Math.ceil(wordCount / 200))} min read`,
@@ -251,6 +268,53 @@ const buildDailyTipArticle = (tip: Record<string, any>): Article => {
     created_at: tip?.created_at ?? null,
     published_at: tip?.published_at ?? tip?.created_at ?? null,
   };
+};
+
+const buildPostedContentArticle = (record: Record<string, any>): Article => {
+  const content = record.body ?? record.content ?? "";
+  const excerpt = record.description ?? record.excerpt ?? "";
+  const wordCount = String(content || excerpt).trim().split(/\s+/).filter(Boolean).length;
+  const readTime = record.readTime ?? record.read_time ?? `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
+  const publishedAt = record.publishedAt ?? record.published_at ?? record.createdAt ?? record.created_at ?? null;
+
+  return {
+    id: String(record.id ?? record.slug ?? ""),
+    title: record.title ?? "Untitled story",
+    category: record.category ?? "General",
+    excerpt,
+    description: excerpt,
+    content,
+    author: record.author ?? "",
+    image: record.image || record.imageUrl || record.image_url || record.coverImage || record.coverImageUrl || record.cover_image || record.cover_image_url || record.featured_image || "",
+    date: publishedAt,
+    created_at: record.createdAt ?? record.created_at ?? publishedAt,
+    published_at: publishedAt,
+    readTime,
+    read_time: readTime,
+    type: record.contentType ?? record.content_type ?? "blog",
+    topic: record.category ?? "",
+    status: record.status ?? "published",
+    content_type: record.contentType ?? record.content_type ?? "blog",
+    cover_image: record.coverImage ?? record.cover_image ?? record.cover_image_url ?? "",
+    slug: record.slug,
+    tags: Array.isArray(record.tags) ? record.tags : [],
+  };
+};
+
+const getPostedContentArticle = async (id: string): Promise<Article | null> => {
+  if (typeof fetch !== "function") return null;
+
+  try {
+    const response = await fetch(`/api/public/content/${encodeURIComponent(id)}`);
+    if (!response.ok) return null;
+
+    const payload = await response.json();
+    if (!payload?.item) return null;
+
+    return buildPostedContentArticle(payload.item as Record<string, any>);
+  } catch {
+    return null;
+  }
 };
 
 export async function getArticleById(id: string): Promise<Article | null> {
@@ -261,42 +325,45 @@ export async function getArticleById(id: string): Promise<Article | null> {
     return buildMockArticle(localArticle);
   }
 
-  if (!supabase) return null;
+  if (supabase) {
+    const { data: articleData, error: articleError } = await supabase
+      .from("articles")
+      .select("*")
+      .eq("id", id)
+      .eq("status", "published")
+      .maybeSingle();
 
-  const { data: articleData, error: articleError } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("id", id)
-    .eq("status", "published")
-    .maybeSingle();
+    if (articleError) {
+      console.error("Error loading article by ID:", articleError);
+    }
 
-  if (articleError) {
-    console.error("Error loading article by ID:", articleError);
+    if (articleData) {
+      const article = articleData as Article;
+      return {
+        ...article,
+        image: article.image || article.imageUrl || article.image_url || article.coverImage || article.coverImageUrl || article.cover_image || article.cover_image_url || article.featured_image || "",
+        published_at: article.published_at ?? article.created_at ?? article.date ?? null,
+        created_at: article.created_at ?? article.published_at ?? article.date ?? null,
+      } as Article;
+    }
+
+    const { data: dailyTipData, error: dailyTipError } = await supabase
+      .from("daily_tips")
+      .select("*")
+      .eq("id", id)
+      .eq("status", "published")
+      .maybeSingle();
+
+    if (dailyTipError) {
+      console.error("Error loading Daily Edit story by ID:", dailyTipError);
+    }
+
+    if (dailyTipData) {
+      return buildDailyTipArticle(dailyTipData as Record<string, any>);
+    }
   }
 
-  if (articleData) {
-    return {
-      ...(articleData as Article),
-      published_at: (articleData as Article).published_at ?? (articleData as Article).created_at ?? (articleData as Article).date ?? null,
-      created_at: (articleData as Article).created_at ?? (articleData as Article).published_at ?? (articleData as Article).date ?? null,
-    } as Article;
-  }
-
-  const { data: dailyTipData, error: dailyTipError } = await supabase
-    .from("daily_tips")
-    .select("*")
-    .eq("id", id)
-    .eq("status", "published")
-    .maybeSingle();
-
-  if (dailyTipError) {
-    console.error("Error loading Daily Edit story by ID:", dailyTipError);
-    return null;
-  }
-
-  if (!dailyTipData) return null;
-
-  return buildDailyTipArticle(dailyTipData as Record<string, any>);
+  return getPostedContentArticle(id);
 }
 
 export async function getPublishedBigStories(): Promise<Article[]> {

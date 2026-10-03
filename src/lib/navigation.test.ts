@@ -17,6 +17,13 @@ test('maps startup routes without ids back to the startups list', () => {
   });
 });
 
+test('maps the latest route to the published story feed', () => {
+  assert.deepStrictEqual(getRouteFromPath('/latest'), {
+    screen: 'latest',
+    articleId: 'dispatch-842',
+  });
+});
+
 test('maps the events route to the events screen', () => {
   assert.deepStrictEqual(getRouteFromPath('/events'), {
     screen: 'events',

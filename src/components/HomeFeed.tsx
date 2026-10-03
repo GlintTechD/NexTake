@@ -83,11 +83,10 @@ const TEAM_MEMBERS = [
 ];
 
 import {
-  getLatestArticles,
   getPublishedBigStories,
   type Article as SupabaseArticle,
-  type LatestArticle,
 } from "../lib/supabase";
+import { getLatestPublishedStories, type LatestStory } from '../lib/latest';
 
 import {
   ArrowRight,
@@ -122,17 +121,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 }) => {
 
 
-  const [latestArticles, setLatestArticles] = useState<LatestArticle[]>([]);
+  const [latestArticles, setLatestArticles] = useState<LatestStory[]>([]);
   const [latestLoading, setLatestLoading] = useState(true);
   const [publishedBigStories, setPublishedBigStories] = useState<SupabaseArticle[]>([]);
   const [publishedMedia, setPublishedMedia] = useState<PublishedTechMedia[]>([]);
 
   const [activeCategoryTab, setActiveCategoryTab] = useState("All");
-
-  const [selectedTopic, setSelectedTopic] = useState("All Topics");
-  const [selectedType, setSelectedType] = useState("All Types");
-
-  const [searchQuery, setSearchQuery] = useState("");
 
 
   const [followedOperators, setFollowedOperators] = useState<Record<string, boolean>>({
@@ -193,18 +187,23 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     }
   };
   useEffect(() => {
+    let isMounted = true;
+
     const loadLatestArticles = async () => {
       setLatestLoading(true);
-
-      const articles = await getLatestArticles();
-
-      console.log("Published articles:", articles);
-
-      setLatestArticles(articles);
-      setLatestLoading(false);
+      try {
+        const articles = await getLatestPublishedStories();
+        if (isMounted) setLatestArticles(articles);
+      } catch (error) {
+        console.error('Failed to load published stories:', error);
+        if (isMounted) setLatestArticles([]);
+      } finally {
+        if (isMounted) setLatestLoading(false);
+      }
     };
 
-    loadLatestArticles();
+    void loadLatestArticles();
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
@@ -232,7 +231,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     return () => { isMounted = false; };
   }, []);
 
-  const activeBigStory = (() => {
+  const activeBigStory: {
+    id: string;
+    tag: string;
+    meta: string;
+    title: string;
+    description: string;
+    image?: string;
+    takeaways: Array<{ num: string; label: string; text: string }>;
+  } = (() => {
     if (publishedBigStories.length === 0) return BIG_STORY;
 
     const story = publishedBigStories[0];
@@ -252,38 +259,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       ],
     };
   })();
-  const filteredArticles = latestArticles.filter((article) => {
-    const matchesCategory =
-      activeCategoryTab === "All" ||
-      article.category.toLowerCase() ===
-      activeCategoryTab.toLowerCase();
-
-    const matchesTopic =
-      selectedTopic === "All Topics" ||
-      article.topic.toLowerCase() ===
-      selectedTopic.toLowerCase();
-
-    const matchesType =
-      selectedType === "All Types" ||
-      article.type.toLowerCase() ===
-      selectedType.toLowerCase();
-
-    const query = searchQuery.trim().toLowerCase();
-
-    const matchesSearch =
-      !query ||
-      article.title.toLowerCase().includes(query) ||
-      article.description.toLowerCase().includes(query) ||
-      article.category.toLowerCase().includes(query) ||
-      article.topic.toLowerCase().includes(query);
-
-    return (
-      matchesCategory &&
-      matchesTopic &&
-      matchesType &&
-      matchesSearch
-    );
-  });
+  const latestCategories = Array.from(
+    new Set(latestArticles.map((article) => article.category.trim()).filter(Boolean)),
+  );
+  const filteredArticles = latestArticles.filter((article) =>
+    activeCategoryTab === "All" || article.category.toLowerCase() === activeCategoryTab.toLowerCase(),
+  );
   useEffect(() => {
     const loadDailyEdit = async () => {
       setDailyEditLoading(true);
@@ -368,32 +349,62 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate('article', item.id)}
-                className="text-left bg-white p-4 rounded-lg border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group"
+                className={`group relative isolate flex cursor-pointer flex-col justify-between overflow-hidden rounded-lg border p-4 text-left transition-all hover:shadow-md ${item.image
+                  ? 'border-slate-800 bg-slate-950 text-white hover:border-emerald-400/70'
+                  : 'border-slate-200 bg-white text-slate-900 hover:border-slate-400'
+                  }`}
                 aria-label={`Open full story: ${item.title}`}
               >
-                <div>
-                  <div className="flex items-center justify-between text-xs font-mono mb-2">
-                    <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600 transition-colors">
-                      {item.num}
-                    </span>
+                {item.image && (
+                  <>
+                    <img
+                      src={item.image}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 z-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <span className="absolute inset-0 z-[1] bg-gradient-to-t from-black/90 via-black/60 to-black/35" />
+                  </>
+                )}
 
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-                      {item.tag}
-                    </span>
+                <div className="relative z-10 flex flex-1 flex-col justify-between">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between text-xs font-mono">
+                      <span className={`text-xl font-black transition-colors ${item.image
+                        ? 'text-white/80 group-hover:text-emerald-200'
+                        : 'text-slate-300 group-hover:text-emerald-600'
+                        }`}>
+                        {item.num}
+                      </span>
+
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.image
+                        ? 'border border-white/30 bg-black/35 text-white backdrop-blur-sm'
+                        : 'bg-slate-100 text-slate-600'
+                        }`}>
+                        {item.tag}
+                      </span>
+                    </div>
+
+                    <h3 className={`mb-2 text-xs font-bold leading-snug transition-colors ${item.image
+                      ? 'text-white group-hover:text-emerald-200'
+                      : 'text-slate-900 group-hover:text-emerald-700'
+                      }`}>
+                      {item.title}
+                    </h3>
+
+                    <p className={`line-clamp-3 text-[11px] leading-relaxed ${item.image ? 'text-white/85' : 'text-slate-500'}`}>
+                      {item.description}
+                    </p>
                   </div>
 
-                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors leading-snug mb-2">
-                    {item.title}
-                  </h3>
-
-                  <p className="text-[11px] text-slate-500 line-clamp-3 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 mt-3 border-t border-slate-100">
-                  <span>{item.timeAgo}</span>
-                  <span>{item.readTime}</span>
+                  <div className={`mt-3 flex items-center justify-between border-t pt-3 text-[10px] font-mono ${item.image
+                    ? 'border-white/25 text-white/75'
+                    : 'border-slate-100 text-slate-400'
+                    }`}>
+                    <span>{item.timeAgo}</span>
+                    <span>{item.readTime}</span>
+                  </div>
                 </div>
               </button>
             ))
@@ -654,51 +665,25 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           </div>
 
           <div className="flex items-center space-x-3 text-xs font-mono text-slate-400">
-            <span>Feed updated every 5 minutes</span>
+            <span>{latestArticles.length} published {latestArticles.length === 1 ? 'story' : 'stories'}</span>
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {['All', 'AI', 'Fintech', 'Startups', 'Cybersecurity', 'Hardware'].map(
-              (cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategoryTab(cat)}
-                  className={`px-3 py-1.5 text-xs font-mono font-semibold rounded transition-colors ${activeCategoryTab === cat
-                    ? 'bg-slate-950 text-white'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                    }`}
-                >
-                  {cat}
-                </button>
-              )
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2 text-xs font-mono">
-            <select
-              value={selectedTopic}
-              onChange={(e) => setSelectedTopic(e.target.value)}
-              className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
+        {/* Categories are derived only from published stories. */}
+        <div className="mb-6 flex flex-wrap items-center gap-1.5">
+          {['All', ...latestCategories].map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setActiveCategoryTab(category)}
+              className={`rounded px-3 py-1.5 text-xs font-mono font-semibold transition-colors ${activeCategoryTab === category
+                ? 'bg-slate-950 text-white'
+                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                }`}
             >
-              <option>All Topics</option>
-              <option>Deep Learning</option>
-              <option>Venture Capital</option>
-              <option>Silicon Fabs</option>
-            </select>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="bg-white border border-slate-200 text-slate-700 px-2.5 py-1.5 rounded focus:outline-none focus:border-slate-400"
-            >
-              <option>All Types</option>
-              <option>Dispatches</option>
-              <option>Monographs</option>
-              <option>Interviews</option>
-            </select>
-          </div>
+              {category}
+            </button>
+          ))}
         </div>
 
         {/* Latest Dispatches List */}
@@ -778,10 +763,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
         <div className="text-center mt-8">
           <button
-            onClick={() => onNavigate('explore')}
+            onClick={() => onNavigate('latest')}
             className="px-6 py-2.5 rounded bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-mono font-bold tracking-wider inline-flex items-center space-x-2 shadow-sm transition-colors"
           >
-            <span>Load more stories ⤓</span>
+            <span>See all published stories ⤓</span>
           </button>
 
         </div>

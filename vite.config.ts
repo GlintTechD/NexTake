@@ -13,6 +13,7 @@ export default defineConfig(() => {
     },
     server: {
       port: 4100,
+      allowedHosts: ['.e2b.app'],
       proxy: {
         '/api': {
           target: 'http://localhost:4101',

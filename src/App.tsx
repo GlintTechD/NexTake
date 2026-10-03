@@ -6,6 +6,7 @@ import { HomeFeed } from './components/HomeFeed';
 import { ArticleView } from './components/ArticleView';
 import { CommentsView } from './components/CommentsView';
 import { ExploreView } from './components/ExploreView';
+import { LatestView } from './components/LatestView';
 import { ShortsStage } from './components/ShortsStage';
 import { InterviewView } from './components/InterviewView';
 import { Footer } from './components/Footer';
@@ -57,6 +58,10 @@ export default function App() {
         setSelectedStartupId(startupId);
       }
       setCurrentScreen('startup-article');
+      return;
+    }
+    if (path === '/latest') {
+      setCurrentScreen('latest');
       return;
     }
     if (path === '/explore') {
@@ -127,6 +132,8 @@ export default function App() {
 
     if (screen === 'home') {
       window.history.pushState({}, '', '/');
+    } else if (screen === 'latest') {
+      window.history.pushState({}, '', '/latest');
     } else if (screen === 'explore') {
       window.history.pushState({}, '', '/explore');
     } else if (screen === 'shorts') {
@@ -207,6 +214,14 @@ export default function App() {
           <CommentsView
             onNavigate={handleNavigate}
             articleId={selectedArticleId}
+          />
+        )}
+
+        {currentScreen === 'latest' && (
+          <LatestView
+            onNavigate={handleNavigate}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
           />
         )}
 

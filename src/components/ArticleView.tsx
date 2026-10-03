@@ -440,44 +440,15 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
         </div>
 
         {/* =========================================
-            HERO IMAGE
-        ========================================== */}
-        {article.image && (
-          <div className="rounded-lg overflow-hidden border border-slate-800 bg-slate-950 mb-8 shadow-lg">
-            <div className="relative aspect-video sm:aspect-[21/9]">
-              <img
-                src={article.image}
-                alt={article.title}
-                className="w-full h-full object-cover opacity-90"
-              />
-
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-
-              {/* Bottom HUD Bar */}
-              <div className="absolute bottom-0 inset-x-0 bg-slate-950/90 backdrop-blur-sm border-t border-slate-800 px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] font-mono text-slate-300 gap-1">
-                <span className="text-emerald-400 truncate max-w-[70%]">
-                  {article.heroAperture ||
-                    `${articleCategory} • Published article`}
-                </span>
-
-                <span className="text-slate-400 shrink-0">
-                  Published • {articleReadTime}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* =========================================
             MULTI-COLUMN PROSE + SIDEBAR
         ========================================== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* =======================================
               MAIN ARTICLE
           ======================================== */}
-          <div className="lg:col-span-8 space-y-8 text-slate-800 font-editorial text-lg leading-[1.8]">
+          <div className="order-2 space-y-8 text-slate-800 font-editorial text-lg leading-[1.8] lg:order-1 lg:col-span-8">
             {/* =====================================
-                REAL ARTICLE CONTENT FROM SUPABASE
+                PUBLISHED ARTICLE CONTENT
             ====================================== */}
             <div className="font-editorial text-lg text-slate-800 leading-[1.8] whitespace-pre-wrap">
               {article.content ? (
@@ -645,7 +616,7 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
               <p className="font-editorial text-lg text-slate-800 leading-[1.8] mb-6">
                 This section contains the published analysis associated with
                 this story. The article content above is loaded directly from
-                the published record in Supabase.
+                its published record.
               </p>
 
               {/* =================================
@@ -695,9 +666,25 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
           {/* =======================================
               ARTICLE SIDEBAR
           ======================================== */}
-          <aside className="lg:col-span-4">
-            <div className="sticky top-24 rounded-lg border border-slate-200 bg-slate-50 p-5">
-              <div className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider mb-4">
+          <aside className="order-1 lg:order-2 lg:col-span-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-5 lg:sticky lg:top-24">
+              {article.image && (
+                <div className="mb-5 overflow-hidden rounded-lg border border-slate-200 bg-slate-950 shadow-sm">
+                  <div className="relative aspect-[4/3]">
+                    <img
+                      src={article.image}
+                      alt={article.title}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 px-3 py-2 text-[10px] font-mono text-white/90">
+                      {article.heroAperture || `${articleCategory} • Published article`}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-4 text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
                 Article information
               </div>
 
