@@ -87,6 +87,7 @@ export interface ShortItem {
   relatedInterviewId?: string;
   companyId?: string;
   tags: string[];
+  publishedAt?: string;
 }
 
 export interface Interview {

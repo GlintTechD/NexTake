@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ScreenView } from "../types";
 import { ALL_HERO_ARTICLES } from "../data/mockData";
 import { getArticleById, getLatestArticles } from "../lib/supabase";
+import { isYouTubeVideoUrl, toYouTubeEmbedUrl } from "../lib/video";
 
 import {
   Bookmark,
@@ -28,6 +29,7 @@ interface Article {
   author?: string;
   avatar?: string;
   image?: string;
+  videoUrl?: string;
   date?: string;
   readTime?: string;
   read_time?: string;
@@ -450,6 +452,21 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
             {/* =====================================
                 PUBLISHED ARTICLE CONTENT
             ====================================== */}
+            {article.videoUrl && (
+              <div className="relative aspect-video overflow-hidden rounded-xl border border-slate-200 bg-black shadow-sm">
+                {isYouTubeVideoUrl(article.videoUrl) ? (
+                  <iframe
+                    src={toYouTubeEmbedUrl(article.videoUrl)}
+                    title={article.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="absolute inset-0 h-full w-full"
+                  />
+                ) : (
+                  <video src={article.videoUrl} controls playsInline poster={article.image} className="absolute inset-0 h-full w-full object-contain" />
+                )}
+              </div>
+            )}
             <div className="font-editorial text-lg text-slate-800 leading-[1.8] whitespace-pre-wrap">
               {article.content ? (
                 article.content

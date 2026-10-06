@@ -27,6 +27,7 @@ export interface Article {
   author?: string;
   avatar?: string;
   image?: string;
+  videoUrl?: string;
   date?: string;
   readTime?: string;
   read_time?: string;
@@ -69,32 +70,45 @@ export interface DailyEditItem {
 }
 
 export async function getDailyEditItems(): Promise<DailyEditItem[]> {
-  if (!supabase) return [];
-
-  const { data, error } = await supabase
-    .from("daily_tips")
-    .select("*")
-    .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .limit(5);
-
-  if (error) {
-    console.error("Error loading Daily Editorial:", error);
-    return [];
+  let data: any[] = [];
+  if (supabase) {
+    const result = await supabase
+      .from("daily_tips")
+      .select("*")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(5);
+    if (result.error) console.error("Error loading Daily Editorial:", result.error);
+    data = result.data ?? [];
   }
 
-  return (data ?? []).map((tip, index) => {
+  if (data.length === 0) {
+    try {
+      const response = await fetch('/api/public/content');
+      if (response.ok) {
+        const payload = await response.json() as { items?: any[] };
+        data = (payload.items ?? [])
+          .filter((item) => ['daily-edit', 'blog', 'news', 'media'].includes(String(item.contentType ?? item.content_type ?? '').toLowerCase()))
+          .sort((a, b) => new Date(b.publishedAt ?? b.published_at ?? b.createdAt ?? b.created_at ?? 0).getTime() - new Date(a.publishedAt ?? a.published_at ?? a.createdAt ?? a.created_at ?? 0).getTime())
+          .slice(0, 5);
+      }
+    } catch {
+      data = [];
+    }
+  }
+
+  return data.map((tip, index) => {
     const wordCount = (tip.content ?? "").trim().split(/\s+/).filter(Boolean).length;
     const readTime = `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
 
     return {
-      id: tip.id,
+      id: String(tip.id ?? tip.slug ?? index),
       num: String(index + 1).padStart(2, "0"),
       tag: tip.category ?? "General",
-      timeAgo: formatTimeAgo(tip.published_at ?? tip.created_at),
+      timeAgo: formatTimeAgo(tip.published_at ?? tip.publishedAt ?? tip.created_at ?? tip.createdAt),
       readTime,
       title: tip.title ?? "",
-      description: tip.content ?? tip.excerpt ?? tip.description ?? "",
+      description: tip.content ?? tip.body ?? tip.excerpt ?? tip.description ?? "",
       image: tip.image || tip.imageUrl || tip.image_url || tip.coverImage || tip.coverImageUrl || tip.cover_image || tip.cover_image_url || tip.featured_image || "",
     };
   });
@@ -286,6 +300,7 @@ const buildPostedContentArticle = (record: Record<string, any>): Article => {
     content,
     author: record.author ?? "",
     image: record.image || record.imageUrl || record.image_url || record.coverImage || record.coverImageUrl || record.cover_image || record.cover_image_url || record.featured_image || "",
+    videoUrl: record.videoUrl || record.video_url || "",
     date: publishedAt,
     created_at: record.createdAt ?? record.created_at ?? publishedAt,
     published_at: publishedAt,

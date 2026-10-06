@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ScreenView, SearchResultItem } from '../types';
 import { subscribeToNewsletter } from '../lib/newsletter';
 import {
-  ALL_EXPLORE_ITEMS,
   DOMAIN_TOPICS,
   OPERATORS_LIST,
   COMPANIES_LIST,
 } from '../data/mockData';
+import { getLatestPublishedStories, type LatestStory } from '../lib/latest';
 import {
   Search,
   X,
@@ -63,9 +63,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onNavigate,
   savedIds,
   onToggleSave,
-  initialQuery = 'FINTECH',
+  initialQuery = '',
 }) => {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [publishedItems, setPublishedItems] = useState<SearchResultItem[]>([]);
   const [activeFilterTab, setActiveFilterTab] = useState('ALL');
   const [followedPeople, setFollowedPeople] = useState<Record<string, boolean>>({
     'Patrick Collison': true,
@@ -77,6 +78,27 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'success' | 'error' | null>(null);
   const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    void getLatestPublishedStories().then((stories: LatestStory[]) => {
+      if (!mounted) return;
+      setPublishedItems(stories.map((story) => ({
+        id: story.id,
+        articleId: story.id,
+        type: 'story',
+        title: story.title,
+        category: story.category,
+        summary: story.description,
+        timeAgo: story.timeAgo,
+        readTime: story.readTime,
+        thumbnail: story.image,
+        author: story.author,
+        tags: [story.category],
+      })));
+    }).catch(() => mounted && setPublishedItems([]));
+    return () => { mounted = false; };
+  }, []);
 
   const handleNewsletterSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,16 +134,16 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
   // Filter items: first by query match (tags or category/title text), then by type tab
   const queryFiltered = useMemo(() => {
-    if (!searchQuery.trim()) return ALL_EXPLORE_ITEMS;
+    if (!searchQuery.trim()) return publishedItems;
     const q = searchQuery.toLowerCase();
-    return ALL_EXPLORE_ITEMS.filter((item) => {
+    return publishedItems.filter((item) => {
       const tagMatch = item.tags?.some((t) => t.toLowerCase().includes(q));
       const titleMatch = item.title.toLowerCase().includes(q);
       const catMatch = item.category.toLowerCase().includes(q);
       const summaryMatch = item.summary.toLowerCase().includes(q);
       return tagMatch || titleMatch || catMatch || summaryMatch;
     });
-  }, [searchQuery]);
+  }, [searchQuery, publishedItems]);
 
   const filteredResults = useMemo(() => {
     return queryFiltered.filter((item) => {
@@ -627,6 +649,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         </div>
       </section>
 
+      {false && <>
       {/* 4. DOMAIN MATRIX / EXPLORE BY TOPIC (matching 2.png) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 gap-2">
@@ -758,6 +781,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           </div>
         </div>
       </section>
+
+      </>}
 
       {/* 6. Newsletter Banner (matching 2.png) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
