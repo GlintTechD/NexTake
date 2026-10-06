@@ -23,6 +23,8 @@ export interface InterviewItem {
   category: string;
   thumbnail: string;
   videoUrl?: string;
+  isPodcast?: boolean;
+  podcastSeries?: string;
   duration: string;
   durationSeconds: number;
   views: string;
@@ -452,5 +454,104 @@ export const ALL_INTERVIEWS: InterviewItem[] = [
       },
     ],
     tags: ['Cybersecurity', 'eBPF', 'Kernel', 'Prompt Injection', 'GPU VRAM', 'Zero-Trust'],
+  },
+  {
+    id: 'podcast-ep-14',
+    episodeNumber: 14,
+    title: 'The NexTake Podcast: Silicon Photonics, 100T Parameter Clusters & The Death of Copper',
+    category: 'Podcasts & Audio',
+    isPodcast: true,
+    podcastSeries: 'The NexTake Audio Monographs',
+    thumbnail: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=1200&q=80',
+    duration: '54:12',
+    durationSeconds: 3252,
+    views: '89K listens',
+    viewCountRaw: 89400,
+    uploadedAgo: '3 days ago',
+    guest: {
+      name: 'Dr. Aris Thorne',
+      role: 'Chief Optical Architect',
+      company: 'Aperture Silicon',
+      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
+      subscribers: '65K listeners',
+    },
+    host: {
+      name: 'Elena Vance',
+      role: 'Editor-in-Chief',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    },
+    executiveSummary:
+      'In this audio monograph, Dr. Aris Thorne discusses the physics boundaries of modern GPU interconnects, why copper wiring fails at multi-gigahertz frequencies, and how electro-absorption optical modulators will define the next decade of AI data centers.',
+    featuredQuote: {
+      text: 'Every gigawatt datacenter of 2028 is a thermal management challenge disguised as a computer. Light through silica waveguides is our only physical escape hatch.',
+      timestamp: '21:04',
+    },
+    chapters: [
+      { time: '00:00', seconds: 0, title: 'Episode Intro: The Physics Wall of Copper', description: 'Thermal limits and signal attenuation.' },
+      { time: '14:20', seconds: 860, title: 'Silicon Waveguide Lithography', description: 'Etching sub-micron optical paths directly on silicon.' },
+      { time: '32:15', seconds: 1935, title: 'Energy Dissipation & Net Compute Efficiency', description: 'Reaching 0.5 picojoules per bit.' },
+      { time: '48:30', seconds: 2910, title: 'The Next Wave of Hardware Standards', description: 'Open optical standards and consortium roadmap.' },
+    ],
+    comments: [
+      {
+        id: 'pod-c1',
+        author: 'Telecom Engineer',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+        handle: '@photon_lead',
+        timeAgo: '1 day ago',
+        text: 'The audio clarity and level of depth in this podcast is unmatched in the industry.',
+        likes: 42,
+      },
+    ],
+    tags: ['Podcast', 'Silicon Photonics', 'Hardware', 'Interconnects', 'Datacenters'],
+  },
+  {
+    id: 'podcast-ep-13',
+    episodeNumber: 13,
+    title: 'The NexTake Podcast: Sovereign Rails, Africa FX Corridors & Instant Settlement',
+    category: 'Podcasts & Audio',
+    isPodcast: true,
+    podcastSeries: 'The NexTake Audio Monographs',
+    thumbnail: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=1200&q=80',
+    duration: '42:10',
+    durationSeconds: 2530,
+    views: '112K listens',
+    viewCountRaw: 112300,
+    uploadedAgo: '6 days ago',
+    guest: {
+      name: 'Olugbenga Agboola',
+      role: 'CEO & Founder',
+      company: 'Flutterwave',
+      avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=200&q=80',
+      subscribers: '98K listeners',
+    },
+    host: {
+      name: 'Elena Vance',
+      role: 'Editor-in-Chief',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    },
+    executiveSummary:
+      'A deep podcast conversation on how bilateral central bank liquidity agreements and real-time payment switches are removing SWIFT correspondent banking fees from African cross-border trade.',
+    featuredQuote: {
+      text: 'Bypassing synthetic dollar conversions cuts trading friction by 800 basis points. That is not just financial efficiency; it is sovereign GDP growth.',
+      timestamp: '16:45',
+    },
+    chapters: [
+      { time: '00:00', seconds: 0, title: 'Corridor Frictions in Emerging Markets', description: 'Legacy correspondent routing.' },
+      { time: '12:30', seconds: 750, title: 'Local Currency Liquidity Pools', description: 'Direct NGN-KES-GHS pairing.' },
+      { time: '28:10', seconds: 1690, title: 'Stablecoins in Enterprise Treasuries', description: 'Real-time settlement mechanisms.' },
+    ],
+    comments: [
+      {
+        id: 'pod-c2',
+        author: 'Fintech Founder',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80',
+        handle: '@lagos_fintech',
+        timeAgo: '3 days ago',
+        text: 'Essential listening for anyone building treasury infrastructure in high-growth corridors.',
+        likes: 64,
+      },
+    ],
+    tags: ['Podcast', 'Fintech', 'Sovereign Rails', 'Payments', 'Africa'],
   },
 ];

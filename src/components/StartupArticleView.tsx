@@ -209,9 +209,6 @@ export const StartupArticleView: React.FC<StartupArticleViewProps> = ({
             <div className="flex flex-wrap items-center justify-between py-3 border-y border-slate-200 gap-4 mb-6">
               {/* Left Byline */}
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-[#0b1329] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                  N
-                </div>
                 <div className="text-xs sm:text-sm">
                   <span className="font-semibold text-slate-900">By {authorName}</span>
                   <span className="text-slate-400 mx-2">·</span>

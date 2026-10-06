@@ -733,12 +733,6 @@ export const ArticleView: React.FC<ArticleViewProps> = ({
         ========================================== */}
         <div className="mt-16 flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-200 mb-8">
           <div className="flex items-center space-x-3">
-            <img
-              src={article.avatar || "https://i.pravatar.cc/64?img=60"}
-              alt={articleAuthor}
-              className="w-9 h-9 rounded-full object-cover border border-slate-300"
-            />
-
             <div>
               <div className="text-xs font-mono font-bold text-slate-900">
                 {articleAuthor}

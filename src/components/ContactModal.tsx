@@ -1,5 +1,4 @@
 import React, { useRef, useState } from "react";
-import emailjs from "@emailjs/browser";
 
 import {
   X,
@@ -38,25 +37,34 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!formRef.current) return;
-
     setIsSending(true);
     setError("");
 
     try {
-      await emailjs.sendForm(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        formRef.current,
-        {
-          publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
+      const response = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          name,
+          email,
+          organization,
+          inquiryType,
+          message,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Unable to send your message. Please try again.");
+      }
 
       setIsSubmitted(true);
-    } catch (error) {
-      console.error("EmailJS Error:", error);
-      setError("Unable to send your message. Please try again.");
+    } catch (err) {
+      console.error("Contact Form Error:", err);
+      setError(err instanceof Error ? err.message : "Unable to send your message. Please try again.");
     } finally {
       setIsSending(false);
     }

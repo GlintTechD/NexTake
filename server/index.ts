@@ -279,6 +279,110 @@ const sendOtpEmail = async (username: string, otp: string) => {
   }
 };
 
+interface ContactSubmission {
+  name: string;
+  email: string;
+  organization?: string;
+  inquiryType: string;
+  message: string;
+}
+
+const sendContactEmail = async (submission: ContactSubmission) => {
+  const recipientEmail = config.CONTACT_RECIPIENT_EMAIL || config.ADMIN_EMAIL;
+  const inquiryLabel =
+    {
+      editorial: 'Editorial Story Pitch',
+      tip: 'Secure Leak / Whistleblower Tip',
+      press: 'Press Desk Inquiry',
+      corporate: 'Corporate Partnership',
+    }[submission.inquiryType] || submission.inquiryType;
+
+  if (!config.RESEND_API_KEY) {
+    if (isProduction) {
+      throw new Error('RESEND_API_KEY is required in production.');
+    }
+    console.warn(`[contact] Submission received (RESEND_API_KEY not configured):`, submission);
+    return;
+  }
+
+  const fromAddress = buildResendFromAddress(config.RESEND_FROM_EMAIL, config.RESEND_FROM_NAME);
+
+  const htmlContent = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+      <div style="border-bottom: 2px solid #00f2aa; padding-bottom: 12px; margin-bottom: 20px;">
+        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; font-weight: bold;">NexTake Editorial Desk</span>
+        <h2 style="margin: 6px 0 0; color: #0f172a; font-size: 20px;">New Contact Inquiry: ${inquiryLabel}</h2>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; width: 140px; font-weight: 600;">Sender Name:</td>
+          <td style="padding: 8px 0; color: #0f172a; font-weight: bold;">${submission.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Email:</td>
+          <td style="padding: 8px 0;"><a href="mailto:${submission.email}" style="color: #059669; font-weight: 600; text-decoration: none;">${submission.email}</a></td>
+        </tr>
+        ${
+          submission.organization
+            ? `
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Organization:</td>
+          <td style="padding: 8px 0; color: #0f172a;">${submission.organization}</td>
+        </tr>`
+            : ''
+        }
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Routing Type:</td>
+          <td style="padding: 8px 0; color: #0f172a;"><span style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-size: 12px;">${inquiryLabel}</span></td>
+        </tr>
+      </table>
+
+      <div style="background: #f8fafc; border-left: 4px solid #00f2aa; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
+        <div style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 8px;">Message:</div>
+        <div style="font-size: 14px; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${submission.message}</div>
+      </div>
+
+      <div style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+        Delivered by NexTake Telemetry Switch. Reply directly to this email to contact the sender.
+      </div>
+    </div>
+  `;
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: fromAddress,
+      to: [recipientEmail],
+      reply_to: submission.email,
+      subject: `[NexTake Desk] ${inquiryLabel} from ${submission.name}`,
+      html: htmlContent,
+    }),
+  });
+
+  if (!response.ok) {
+    let payload: any = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = await response.text();
+    }
+
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || payload?.error || 'Failed to send contact email via Resend.';
+
+    throw new Error(
+      `${message}. Check that RESEND_FROM_EMAIL is a verified sender in your Resend dashboard.`,
+    );
+  }
+};
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -609,6 +713,49 @@ app.post('/api/public/newsletter', async (request, response) => {
     frequency,
     newsletterSubscribers: newsletterSubscribers.size,
   });
+});
+
+app.post('/api/public/contact', async (request, response) => {
+  const name = String(request.body?.name ?? '').trim();
+  const email = String(request.body?.email ?? '').trim().toLowerCase();
+  const organization = String(request.body?.organization ?? '').trim();
+  const inquiryType = String(request.body?.inquiryType ?? request.body?.inquiry_type ?? 'editorial').trim();
+  const message = String(request.body?.message ?? '').trim();
+
+  if (!name) {
+    response.status(400).json({ ok: false, message: 'Your name is required.' });
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    response.status(400).json({ ok: false, message: 'Enter a valid email address.' });
+    return;
+  }
+
+  if (!message) {
+    response.status(400).json({ ok: false, message: 'Message content cannot be empty.' });
+    return;
+  }
+
+  try {
+    await sendContactEmail({ name, email, organization, inquiryType, message });
+
+    recordPublicActivity({
+      action: 'Contact inquiry received',
+      target: `${name} (${inquiryType})`,
+      user: 'Public Site',
+      type: 'edit',
+    });
+
+    response.json({
+      ok: true,
+      message: 'Your dispatch has been successfully transmitted to the editorial desk.',
+    });
+  } catch (error) {
+    console.error('[contact] Error sending message:', error);
+    const msg = error instanceof Error ? error.message : 'Unable to transmit message.';
+    response.status(500).json({ ok: false, message: msg });
+  }
 });
 
 app.get('/api/public/content/:slug', async (request, response) => {

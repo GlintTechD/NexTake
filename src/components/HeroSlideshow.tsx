@@ -462,13 +462,6 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
 
                 {/* Author */}
                 <div className="hidden sm:flex items-center space-x-2 text-xs font-mono text-slate-500">
-
-                  <img
-                    src={currentStory.author.avatar}
-                    alt={currentStory.author.name}
-                    className="w-5 h-5 rounded-full object-cover border border-slate-200"
-                  />
-
                   <span className="text-slate-700 font-semibold">
                     {currentStory.author.name}
                   </span>

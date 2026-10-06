@@ -10,10 +10,8 @@ import { LatestView } from './components/LatestView';
 import { ShortsStage } from './components/ShortsStage';
 import { InterviewView } from './components/InterviewView';
 import { Footer } from './components/Footer';
-import { SavedStoriesDrawer } from './components/SavedStoriesDrawer';
 import { DailyEditModal } from './components/DailyEditModal';
 import { ContactModal } from './components/ContactModal';
-import { PostingsPortal } from './components/PostingsPortal';
 import { StartupsView } from './components/StartupsView';
 import { EventsView } from './components/EventsView';
 import { TrendingTicker } from './components/TrendingTicker';
@@ -35,9 +33,6 @@ export default function App() {
 
   const syncCurrentScreenFromPath = () => {
     const path = window.location.pathname;
-    if (path === '/postings') {
-      return;
-    }
     if (path.startsWith('/article/')) {
       if (path.endsWith('/comments')) {
         const articleId = decodeURIComponent(path.slice('/article/'.length, -'/comments'.length));
@@ -103,7 +98,6 @@ export default function App() {
     'short-1',
   ]);
   const [exploreQuery, setExploreQuery] = useState<string>('Fintech');
-  const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false);
   const [isDailyEditOpen, setIsDailyEditOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
 
@@ -146,8 +140,6 @@ export default function App() {
     } else if (screen === 'comments') {
       const articleId = param ?? selectedArticleId;
       window.history.pushState({}, '', `/article/${articleId}/comments`);
-    } else if (screen === 'postings') {
-      window.history.pushState({}, '', '/postings');
     } else if (screen === 'startups') {
       window.history.pushState({}, '', '/startups');
     } else if (screen === 'events') {
@@ -172,10 +164,6 @@ export default function App() {
     setSavedIds((prev) => prev.filter((item) => item !== id));
   };
 
-  if (window.location.pathname === '/postings') {
-    return <PostingsPortal />;
-  }
-
   return (
     <div className="min-h-screen bg-[#fafbfc] text-slate-900 flex flex-col font-sans selection:bg-emerald-400 selection:text-slate-950">
       {/* Top Main Navbar (visible across screens, shorts has custom header or full screen) */}
@@ -183,8 +171,6 @@ export default function App() {
         <Navbar
           currentScreen={currentScreen}
           onNavigate={handleNavigate}
-          savedCount={savedIds.length}
-          onOpenSaved={() => setIsSavedDrawerOpen(true)}
           onOpenDailyEdit={() => setIsDailyEditOpen(true)}
           onOpenContact={() => setIsContactOpen(true)}
         />
@@ -281,15 +267,6 @@ export default function App() {
           onOpenContact={() => setIsContactOpen(true)}
         />
       )}
-
-      {/* "YOUR EDIT" Saved Stories Drawer */}
-      <SavedStoriesDrawer
-        isOpen={isSavedDrawerOpen}
-        onClose={() => setIsSavedDrawerOpen(false)}
-        savedIds={savedIds}
-        onRemoveSave={handleRemoveSave}
-        onNavigate={handleNavigate}
-      />
 
       {/* "GET THE DAILY EDIT" Modal */}
       <DailyEditModal

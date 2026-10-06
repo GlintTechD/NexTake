@@ -1,24 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenView } from '../types';
-import { 
-  Search, 
-  Video, 
-  Mic, 
-  Rocket, 
-  Menu, 
-  X, 
-  Newspaper, 
-  Headphones, 
-  Bookmark, 
-  Sparkles 
-} from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import logo from "../Pic/Logo.png";
 
 interface NavbarProps {
   currentScreen: ScreenView;
   onNavigate: (screen: ScreenView, param?: string) => void;
-  savedCount: number;
-  onOpenSaved: () => void;
   onOpenDailyEdit: () => void;
   onOpenContact?: () => void;
   selectedCategory?: string;
@@ -28,8 +15,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   currentScreen,
   onNavigate,
-  savedCount,
-  onOpenSaved,
   onOpenDailyEdit,
   onOpenContact,
 }) => {
@@ -100,97 +85,64 @@ export const Navbar: React.FC<NavbarProps> = ({
               Home
             </button>
 
-            {/* News / Tech Stories */}
+            {/* Explore (formerly Latest) */}
             <button
-            onClick={() => { onNavigate('latest'); setIsMenuOpen(false); }}
-              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
-                currentScreen === 'latest' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full lg:w-auto justify-start text-left`}
+              onClick={() => { onNavigate('explore'); setIsMenuOpen(false); }}
+              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors ${
+                currentScreen === 'explore' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
+              } w-full lg:w-auto text-left`}
             >
-              <Newspaper className="w-3.5 h-3.5" />
-              <span>Latest</span>
+              Explore
             </button>
 
             {/* Videos */}
             <button
               onClick={() => { onNavigate('shorts'); setIsMenuOpen(false); }}
-              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
+              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors ${
                 currentScreen === 'shorts' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full lg:w-auto justify-start text-left`}
+              } w-full lg:w-auto text-left`}
             >
-              <Video className="w-3.5 h-3.5" />
-              <span>Video</span>
+              Video
             </button>
 
             {/* Interviews */}
             <button
               onClick={() => { onNavigate('interview'); setIsMenuOpen(false); }}
-              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
+              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors ${
                 currentScreen === 'interview' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full lg:w-auto justify-start text-left`}
+              } w-full lg:w-auto text-left`}
             >
-              <Mic className="w-3.5 h-3.5" />
-              <span>Interviews</span>
-            </button>
-
-            {/* Podcasts */}
-            <button
-              onClick={() => { onNavigate('podcasts' as ScreenView); setIsMenuOpen(false); }}
-              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
-                currentScreen === ('podcasts' as ScreenView) ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full lg:w-auto justify-start text-left`}
-            >
-              <Headphones className="w-3.5 h-3.5" />
-              <span>Podcasts</span>
+              Interviews
             </button>
 
             {/* Startups */}
             <button
               onClick={() => { onNavigate('startups'); setIsMenuOpen(false); }}
-              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
+              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors ${
                 currentScreen === 'startups' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full lg:w-auto justify-start text-left`}
+              } w-full lg:w-auto text-left`}
             >
-              <Rocket className="w-3.5 h-3.5" />
-              <span>Startups</span>
+              Startups
             </button>
 
             {/* Daily Edit / AI Digest */}
             <button
               onClick={() => { onOpenDailyEdit(); setIsMenuOpen(false); }}
-              className="px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 text-amber-400 hover:text-amber-300 hover:bg-white/5 w-full lg:w-auto justify-start text-left"
+              className="px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors text-amber-400 hover:text-amber-300 hover:bg-white/5 w-full lg:w-auto text-left"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>News Letter</span>
+              News Letter
             </button>
 
             {/* Events */}
             <button
               onClick={() => { onNavigate('events'); setIsMenuOpen(false); }}
-              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors flex items-center space-x-1.5 ${
+              className={`px-2.5 py-1.5 text-xs font-mono tracking-wider font-semibold rounded transition-colors ${
                 currentScreen === 'events' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'
-              } w-full lg:w-auto justify-start text-left`}
+              } w-full lg:w-auto text-left`}
             >
-              <Search className="w-3.5 h-3.5" />
-              <span>Events</span>
-              {/* <span className="text-[10px] bg-slate-800 text-slate-400 px-1 py-0.5 rounded border border-slate-700 hidden xl:inline">⌘K</span> */}
+              Events
             </button>
           </nav>
-
-          {/* Bookmarks / Saved Posts */}
-          <button
-            onClick={onOpenSaved}
-            aria-label="Saved articles"
-            className="relative p-2 text-slate-300 hover:text-white hover:bg-white/5 rounded transition-colors flex items-center justify-center"
-            title="Saved Articles"
-          >
-            <Bookmark className="w-4 h-4" />
-            {savedCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-emerald-500 text-slate-950 font-mono font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center border border-[#070b10]">
-                {savedCount > 99 ? '99+' : savedCount}
-              </span>
-            )}
-          </button>
 
           {/* Contact Us Pill */}
           <button
