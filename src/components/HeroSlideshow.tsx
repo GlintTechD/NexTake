@@ -415,19 +415,6 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
 
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
 
-                <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] font-mono text-slate-300 pointer-events-none">
-
-                  <span className="truncate max-w-[75%] text-slate-300/90">
-                    {currentStory.imageAperture ||
-                      `© NEXT EDIT • DISPATCH ${currentStory.number}`}
-                  </span>
-
-                  <span className="text-emerald-400 group-hover:underline flex items-center space-x-1 shrink-0 ml-2 font-semibold">
-                    <span>Full dispatch</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </span>
-
-                </div>
               </div>
 
               {/* Actions */}
@@ -460,18 +447,10 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
 
                 </div>
 
-                {/* Author */}
                 <div className="hidden sm:flex items-center space-x-2 text-xs font-mono text-slate-500">
                   <span className="text-slate-700 font-semibold">
                     {currentStory.author.name}
                   </span>
-
-                  <span>•</span>
-
-                  <span>
-                    {currentStory.author.role}
-                  </span>
-
                 </div>
 
               </div>

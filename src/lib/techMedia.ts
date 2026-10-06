@@ -38,7 +38,7 @@ export async function getPublishedTechMedia(): Promise<PublishedTechMedia[]> {
   }
 
   const media = await Promise.all((data ?? []).map(async (record) => {
-    const { data: signedVideo, error: storageError } = await supabase.storage
+    const { data: signedVideo, error: storageError } = await supabase!.storage
       .from("nextake-tech-media")
       .createSignedUrl(String(record.video_path), 60 * 60);
     if (storageError) {
@@ -75,6 +75,7 @@ export function toShortItem(record: PublishedTechMedia, fallbackThumbnail: strin
     videoType: "silicon",
     tags: record.tags.length ? record.tags : [record.category],
     videoUrl: record.video_url,
+    publishedAt: record.published_at,
   };
 }
 
@@ -104,6 +105,7 @@ export function toInterviewItem(record: PublishedTechMedia, fallbackThumbnail: s
     comments: [],
     tags: record.tags,
     videoUrl: record.video_url,
+    publishedAt: record.published_at,
   };
 }
 

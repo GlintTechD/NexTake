@@ -44,3 +44,21 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+.swipe-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent;
+}
+
+.swipe-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.swipe-scrollbar::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.swipe-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+}

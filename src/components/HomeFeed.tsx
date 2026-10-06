@@ -8,9 +8,7 @@ import {
   FEATURED_ARTICLE,
   SHORTS_LIST,
   FEATURED_INTERVIEW,
-  BIG_STORY,
   LATEST_DISPATCHES,
-  DOMAIN_TOPICS,
   OPERATORS_LIST,
 } from '../data/mockData';
 
@@ -141,12 +139,16 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   const [dailyEditItems, setDailyEditItems] = useState<DailyEditItem[]>([]);
   const [dailyEditLoading, setDailyEditLoading] = useState(true);
 
-  const tickerAlerts = [
-    '#842 Real-time protocol telemetry: Anthropic & DeepMind release architectural proofs',
-    '#841 Global hardware runtimes: TSMC commits 2nm fab access to allied silicon program',
-    '#840 SWIFT runtime migration: 14 tier-one clearing houses complete latency overhaul',
-    '#839 Regulatory dispatch: EU commissions first autonomous agent auditing framework',
-  ];
+  const tickerAlerts = latestArticles.length > 0
+    ? latestArticles.slice(0, 6).map((article) => `${article.category} • ${article.title}`)
+    : ['No trending news has been published yet.'];
+
+  const exploreTopics = Array.from(new Set(latestArticles.map((article) => article.category.trim()).filter(Boolean)))
+    .map((name) => ({
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      name,
+      stories: latestArticles.filter((article) => article.category === name).length,
+    }));
 
   // Auto-cycle top ticker
   useEffect(() => {
@@ -239,8 +241,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     description: string;
     image?: string;
     takeaways: Array<{ num: string; label: string; text: string }>;
-  } = (() => {
-    if (publishedBigStories.length === 0) return BIG_STORY;
+  } | null = (() => {
+    if (publishedBigStories.length === 0) return null;
 
     const story = publishedBigStories[0];
     const description = story.excerpt ?? story.description ?? "";
@@ -311,22 +313,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-b border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-slate-200 gap-2">
           <div>
-            <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
-              Curated telemetry
-            </span>
             <h2 className="text-2xl font-black tracking-tight text-slate-950">
               Your Daily Edit
             </h2>
             <p className="text-xs text-slate-500">5 things worth knowing today.</p>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded text-[11px] font-mono bg-white text-slate-700 border border-slate-200 shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="font-semibold text-slate-800">4 new dispatches since your last visit</span>
-              <span className="text-slate-500">(Today 08:30 AM)</span>
-            </span>
-          </div>
         </div>
 
         {/* 5 Cards Row */}
@@ -349,61 +341,21 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate('article', item.id)}
-                className={`group relative isolate flex cursor-pointer flex-col justify-between overflow-hidden rounded-lg border p-4 text-left transition-all hover:shadow-md ${item.image
-                  ? 'border-slate-800 bg-slate-950 text-white hover:border-emerald-400/70'
-                  : 'border-slate-200 bg-white text-slate-900 hover:border-slate-400'
-                  }`}
+                className="group flex cursor-pointer flex-col overflow-hidden rounded-lg border border-slate-200 bg-white text-left transition-all hover:border-slate-400 hover:shadow-md"
                 aria-label={`Open full story: ${item.title}`}
               >
-                {item.image && (
-                  <>
-                    <img
-                      src={item.image}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className="absolute inset-0 z-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <span className="absolute inset-0 z-[1] bg-gradient-to-t from-black/90 via-black/60 to-black/35" />
-                  </>
-                )}
-
-                <div className="relative z-10 flex flex-1 flex-col justify-between">
+                {item.image && <img src={item.image} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105" />}
+                <div className="flex flex-1 flex-col justify-between p-4">
                   <div>
                     <div className="mb-2 flex items-center justify-between text-xs font-mono">
-                      <span className={`text-xl font-black transition-colors ${item.image
-                        ? 'text-white/80 group-hover:text-emerald-200'
-                        : 'text-slate-300 group-hover:text-emerald-600'
-                        }`}>
-                        {item.num}
-                      </span>
-
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.image
-                        ? 'border border-white/30 bg-black/35 text-white backdrop-blur-sm'
-                        : 'bg-slate-100 text-slate-600'
-                        }`}>
-                        {item.tag}
-                      </span>
+                      <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600">{item.num}</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{item.tag}</span>
                     </div>
-
-                    <h3 className={`mb-2 text-xs font-bold leading-snug transition-colors ${item.image
-                      ? 'text-white group-hover:text-emerald-200'
-                      : 'text-slate-900 group-hover:text-emerald-700'
-                      }`}>
-                      {item.title}
-                    </h3>
-
-                    <p className={`line-clamp-3 text-[11px] leading-relaxed ${item.image ? 'text-white/85' : 'text-slate-500'}`}>
-                      {item.description}
-                    </p>
+                    <h3 className="mb-2 text-sm font-bold leading-snug text-slate-900 group-hover:text-emerald-700">{item.title}</h3>
+                    <p className="line-clamp-3 text-[11px] leading-relaxed text-slate-500">{item.description}</p>
                   </div>
-
-                  <div className={`mt-3 flex items-center justify-between border-t pt-3 text-[10px] font-mono ${item.image
-                    ? 'border-white/25 text-white/75'
-                    : 'border-slate-100 text-slate-400'
-                    }`}>
-                    <span>{item.timeAgo}</span>
-                    <span>{item.readTime}</span>
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[10px] font-mono text-slate-400">
+                    <span>{item.timeAgo}</span><span>{item.readTime}</span>
                   </div>
                 </div>
               </button>
@@ -485,7 +437,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       </section>
 
       {/* 5. THE BIG STORY (matching 6.png) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-slate-200">
+      {activeBigStory && <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-slate-200">
         <div className="mb-6">
           <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
             Deep focus • Brief
@@ -580,77 +532,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                       <span className="text-emerald-400">Live</span>
                     </div>
                   </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                      <span className="text-emerald-400">Computational network</span>
-                      <span>Europe & Asia hubs</span>
-                    </div>
-
-                    <div className="my-auto py-4 relative flex items-center justify-center">
-                      <svg
-                        viewBox="0 0 400 200"
-                        className="w-full h-auto text-emerald-400 stroke-current opacity-80"
-                        fill="none"
-                      >
-                        <path
-                          d="M 50 100 Q 100 20 200 20 Q 300 20 350 100 Q 300 180 200 180 Q 100 180 50 100 Z"
-                          strokeWidth="0.5"
-                          strokeDasharray="2 2"
-                          className="text-slate-700"
-                        />
-                        <path
-                          d="M 200 20 L 200 180 M 50 100 L 350 100"
-                          strokeWidth="0.5"
-                          strokeDasharray="3 3"
-                          className="text-slate-700"
-                        />
-
-                        <circle cx="120" cy="70" r="4" fill="#00f2aa" />
-                        <text x="130" y="73" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
-                          Paris • 24k H100
-                        </text>
-
-                        <circle cx="280" cy="85" r="4" fill="#00f2aa" />
-                        <text x="290" y="88" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
-                          Tokyo • 40k H100
-                        </text>
-
-                        <circle cx="170" cy="110" r="4" fill="#00f2aa" />
-                        <text x="180" y="113" fill="#cbd5e1" fontSize="9" fontFamily="monospace">
-                          Dubai • 32k H100
-                        </text>
-
-                        <path
-                          d="M 120 70 Q 200 60 280 85"
-                          stroke="#00f2aa"
-                          strokeWidth="1.5"
-                          strokeDasharray="4 2"
-                        />
-                        <path
-                          d="M 120 70 L 170 110"
-                          stroke="#00f2aa"
-                          strokeWidth="1.2"
-                        />
-                        <path
-                          d="M 170 110 L 280 85"
-                          stroke="#00f2aa"
-                          strokeWidth="1.2"
-                        />
-                      </svg>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-slate-800 pt-2">
-                      <span>Monograph dispatch #412</span>
-                      <span className="text-emerald-400">Federation live</span>
-                    </div>
-                  </>
-                )}
+                ) : <div className="flex h-full items-center justify-center text-xs font-mono text-slate-400">No story image uploaded.</div>}
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* 6. LATEST Feed (matching 6.png) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-b border-slate-200">
@@ -701,7 +588,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               </p>
             </div>
           ) : (
-            filteredArticles.map((article) => (
+            filteredArticles.slice(0, 3).map((article) => (
               <div
                 key={article.id}
                 onClick={() => onNavigate("article", article.id)}
@@ -763,7 +650,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
         <div className="text-center mt-8">
           <button
-            onClick={() => onNavigate('latest')}
+            onClick={() => onNavigate('explore')}
             className="px-6 py-2.5 rounded bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-mono font-bold tracking-wider inline-flex items-center space-x-2 shadow-sm transition-colors"
           >
             <span>See all published stories ⤓</span>
@@ -777,7 +664,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         <div className="flex items-center justify-between mb-8 pb-3 border-b border-slate-200">
           <div>
             <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
-              Taxonomy
             </span>
             <h2 className="text-2xl font-black tracking-tight text-slate-950">
               Explore Topics
@@ -794,7 +680,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {DOMAIN_TOPICS.map((topic) => (
+          {exploreTopics.map((topic) => (
             <div
               key={topic.id}
               onClick={() => onNavigate('explore', topic.name)}
@@ -805,7 +691,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   {topic.name}
                 </h3>
                 <p className="text-xs font-mono text-slate-400 mt-1">
-                  {topic.stories} Stories • {topic.shorts} Shorts
+                  {topic.stories} Stories
                 </p>
               </div>
 
@@ -820,7 +706,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         <div className="flex items-center justify-between mb-8 pb-3 border-b border-slate-200">
           <div>
             <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
-              The Edit
             </span>
             <h2 className="text-2xl font-black tracking-tight text-slate-950">
               Interviews
@@ -947,6 +832,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
                 The Future of Human-AI Interaction Models
               </h4>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono font-bold text-white bg-slate-950 rounded px-2 py-1">Listen</button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono text-slate-700 border border-slate-300 rounded px-2 py-1">Transcript</button>
+              </div>
             </div>
           </div>
 
@@ -971,6 +860,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
                 The Programmable Economy and Autonomous Agent Billing
               </h4>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono font-bold text-white bg-slate-950 rounded px-2 py-1">Listen</button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono text-slate-700 border border-slate-300 rounded px-2 py-1">Transcript</button>
+              </div>
             </div>
           </div>
 
@@ -995,6 +888,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
                 Accelerated Computing and the Next Industrial Revolution
               </h4>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono font-bold text-white bg-slate-950 rounded px-2 py-1">Listen</button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono text-slate-700 border border-slate-300 rounded px-2 py-1">Transcript</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1004,7 +901,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-b border-slate-200">
         <div className="mb-8 pb-3 border-b border-slate-200">
           <span className="text-xs font-mono font-bold tracking-wider text-slate-400">
-            Feed personalization
           </span>
           <h2 className="text-2xl font-black tracking-tight text-slate-950">
             People & Companies
@@ -1069,7 +965,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             </h2>
 
             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                      Request the Daily Edit briefing. Signup requests stay in server memory for the current session; email delivery is not enabled yet.
+                      Request the Daily Edit briefing.
             </p>
 
             <form onSubmit={handleEmailSubmit} className="pt-2 flex flex-col sm:flex-row gap-3">
@@ -1092,7 +988,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             {emailError && <p role="alert" className="pt-2 text-xs text-red-300">{emailError}</p>}
 
             <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 pt-2 gap-3">
-              <span>Signup requests are stored for this server session only.</span>
               <div className="flex items-center space-x-3">
                 <button
                   type="button"

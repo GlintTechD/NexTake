@@ -52,6 +52,7 @@ export interface InterviewItem {
   chapters: InterviewChapter[];
   comments: InterviewComment[];
   tags: string[];
+  publishedAt?: string;
 }
 
 export const ALL_INTERVIEWS: InterviewItem[] = [

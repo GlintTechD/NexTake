@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScreenView, ShortItem } from '../types';
 import { SHORTS_LIST } from '../data/mockData';
 import { getPublishedTechMedia, getUnreplacedShorts, toPublishedShorts, type PublishedTechMedia } from '../lib/techMedia';
+import { getPublishedEmbeddedMedia, type EmbeddedMediaRecord } from '../lib/embeddedMedia';
+import { isYouTubeVideoUrl, toYouTubeEmbedUrl } from '../lib/video';
 import {
   ChevronLeft,
   Camera,
@@ -117,14 +119,40 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
   const [showPlayPulse, setShowPlayPulse] = useState(false);
   const [allComments, setAllComments] = useState<Record<string, Comment[]>>(DEFAULT_COMMENTS_MAP);
   const [publishedMedia, setPublishedMedia] = useState<PublishedTechMedia[]>([]);
+  const [embeddedMedia, setEmbeddedMedia] = useState<EmbeddedMediaRecord[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const touchStartY = useRef<number | null>(null);
   const shorts = useMemo(() => [
+    ...embeddedMedia.filter((record) => record.kind === 'short').map((record) => ({
+      id: record.id,
+      episodeNumber: 0,
+      category: record.category,
+      subCategory: record.category,
+      title: record.title,
+      description: record.description,
+      author: record.author,
+      authorRole: record.authorRole,
+      views: 'New',
+      duration: `${Math.floor((record.durationSeconds || 60) / 60)}:${String((record.durationSeconds || 60) % 60).padStart(2, '0')}`,
+      durationSeconds: record.durationSeconds || 60,
+      likes: '',
+      shares: '',
+      thumbnail: record.thumbnail || SHORTS_LIST[0].thumbnail,
+      videoType: 'network' as const,
+      tags: record.tags.length ? record.tags : [record.category],
+      videoUrl: record.videoUrl,
+      publishedAt: record.publishedAt,
+    })),
     ...toPublishedShorts(publishedMedia),
     ...getUnreplacedShorts(publishedMedia),
-  ], [publishedMedia]);
+  ].sort((first, second) => {
+    if (!first.publishedAt && !second.publishedAt) return 0;
+    if (!first.publishedAt) return 1;
+    if (!second.publishedAt) return -1;
+    return new Date(second.publishedAt).getTime() - new Date(first.publishedAt).getTime();
+  }), [embeddedMedia, publishedMedia]);
 
   const currentShort: ShortItem = shorts[currentIndex] || shorts[0];
   const isCurrentLiked = !!likedShorts[currentShort.id];
@@ -149,8 +177,11 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    void getPublishedTechMedia().then((records) => {
-      if (isMounted) setPublishedMedia(records);
+    void Promise.all([getPublishedTechMedia(), getPublishedEmbeddedMedia()]).then(([records, embedded]) => {
+      if (isMounted) {
+        setPublishedMedia(records);
+        setEmbeddedMedia(embedded);
+      }
     });
     return () => { isMounted = false; };
   }, []);
@@ -428,10 +459,10 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
         <div
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          className="relative w-full h-full sm:h-[860px] sm:max-h-[94vh] sm:w-[420px] aspect-auto sm:aspect-[9/19.5] bg-black sm:rounded-[52px] shadow-[0_0_60px_rgba(0,0,0,0.9),0_0_0_12px_#181c24,0_0_0_14px_#272d3b] border sm:border-slate-800 flex flex-col justify-between overflow-hidden"
+          className="relative w-full h-full sm:h-[860px] sm:max-h-[94vh] sm:w-[420px] aspect-auto sm:aspect-[9/19.5] bg-black flex flex-col justify-between overflow-hidden"
         >
           {/* Hardware Camera / Speaker Notch (iPhone Style) */}
-          <div className="hidden sm:flex absolute top-0 left-1/2 -translate-x-1/2 z-50 w-40 h-6 bg-[#000000] rounded-b-2xl items-center justify-center space-x-3 pointer-events-none">
+          <div className="hidden absolute top-0 left-1/2 -translate-x-1/2 z-50 w-40 h-6 bg-[#000000] rounded-b-2xl items-center justify-center space-x-3 pointer-events-none">
             {/* Speaker bar */}
             <div className="w-12 h-1 bg-[#232731] rounded-full"></div>
             {/* Front camera lens */}
@@ -447,7 +478,15 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
             onClick={togglePlay}
             className="absolute inset-0 z-0 bg-[#070b12] cursor-pointer overflow-hidden"
           >
-            {currentShort.videoUrl ? (
+            {currentShort.videoUrl && isYouTubeVideoUrl(currentShort.videoUrl) ? (
+              <iframe
+                src={toYouTubeEmbedUrl(currentShort.videoUrl)}
+                title={currentShort.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+              />
+            ) : currentShort.videoUrl ? (
               <video
                 ref={videoRef}
                 src={currentShort.videoUrl}
@@ -500,11 +539,7 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
               <ChevronLeft className="w-6 h-6 text-white" />
             </button>
 
-            {/* Center: Sound track / Telemetry badge */}
-            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[11px] font-mono text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-bold uppercase tracking-wider">{currentShort.category}</span>
-            </div>
+            <div />
 
             {/* Right: Camera / Mute Toggle */}
             <div className="flex items-center space-x-2">
@@ -518,16 +553,6 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
                 className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 active:scale-90 backdrop-blur-md border border-white/10 flex items-center justify-center text-white transition-all"
               >
                 {isMuted ? <VolumeX className="w-5 h-5 text-red-400" /> : <Volume2 className="w-5 h-5 text-white" />}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsMoreMenuOpen(true);
-                }}
-                title="Options"
-                className="w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 active:scale-90 backdrop-blur-md border border-white/10 flex items-center justify-center text-white transition-all"
-              >
-                <Camera className="w-5 h-5 text-white" />
               </button>
             </div>
           </div>

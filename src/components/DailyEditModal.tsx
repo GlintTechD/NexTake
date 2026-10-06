@@ -258,22 +258,6 @@ export const DailyEditModal: React.FC<DailyEditModalProps> = ({
               {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
             </form>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-800/80">
-              <span className="flex items-center space-x-1">
-                <Shield className="w-3 h-3 text-emerald-400" />
-
-                <span>
-                  {settings?.privacy_text ||
-                    "Stored in server memory for this session"}
-                </span>
-              </span>
-
-              <span>
-                {settings?.unsubscribe_text ||
-                  "Email delivery is not enabled"}
-              </span>
-            </div>
           </div>
         )}
       </div>
