@@ -26,7 +26,15 @@ const durationFrom = (value: unknown) => {
 };
 
 const mediaKind = (item: Record<string, unknown>, tags: string[]): EmbeddedMediaKind => {
-  const value = [item.mediaType, item.media_type, item.section, item.format, ...tags].map((entry) => text(entry).toLowerCase()).join(' ');
+  const value = [
+    item.mediaType,
+    item.media_type,
+    item.contentType,
+    item.content_type,
+    item.section,
+    item.format,
+    ...tags,
+  ].map((entry) => text(entry).toLowerCase()).join(' ');
   return /short|reel|60.?second/.test(value) ? 'short' : 'interview';
 };
 
@@ -41,7 +49,7 @@ export const getPublishedEmbeddedMedia = async (): Promise<EmbeddedMediaRecord[]
       if (!entry || typeof entry !== 'object') return [];
       const item = entry as Record<string, unknown>;
       const videoUrl = text(item.videoUrl ?? item.video_url);
-      if (!videoUrl || !text(item.contentType ?? item.content_type).toLowerCase().includes('media')) return [];
+      if (!videoUrl) return [];
 
       const tags = Array.isArray(item.tags) ? item.tags.map((tag) => text(tag)).filter(Boolean) : text(item.tags).split(',').map((tag) => tag.trim()).filter(Boolean);
       const publishedAt = text(item.publishedAt ?? item.published_at ?? item.createdAt ?? item.created_at, new Date(0).toISOString());
