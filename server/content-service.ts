@@ -1,6 +1,12 @@
 import crypto from 'node:crypto';
 import { pool } from './db';
 import { ContentRecord, ContentStatus, ContentType, normalizeSlug } from './content';
+import {
+  getFromSupabaseById,
+  getFromSupabaseBySlug,
+  getPublishedFromSupabase,
+  isSupabaseEnabled,
+} from './supabase-content';
 
 const contentTable = 'content';
 
@@ -78,6 +84,10 @@ export const createContentRecord = async (input: Partial<ContentRecord> & Pick<C
 };
 
 export const getPublishedContent = async () => {
+  if (isSupabaseEnabled()) {
+    return getPublishedFromSupabase();
+  }
+
   if (!pool) {
     return [] as ContentRecord[];
   }
@@ -97,6 +107,10 @@ export const getPublishedContent = async () => {
 };
 
 export const getContentBySlug = async (slug: string) => {
+  if (isSupabaseEnabled()) {
+    return getFromSupabaseBySlug(slug);
+  }
+
   if (!pool) {
     return null;
   }
@@ -114,6 +128,10 @@ export const getContentBySlug = async (slug: string) => {
 };
 
 export const getContentById = async (id: string) => {
+  if (isSupabaseEnabled()) {
+    return getFromSupabaseById(id);
+  }
+
   if (!pool) {
     return null;
   }

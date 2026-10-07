@@ -14,6 +14,10 @@ export const config = {
   ADMIN_EMAIL: readEnv('ADMIN_EMAIL', 'martins14747@gmail.com'),
   CONTACT_RECIPIENT_EMAIL: readEnv('CONTACT_RECIPIENT_EMAIL', readEnv('ADMIN_EMAIL', 'martins14747@gmail.com')),
   DATABASE_URL: readEnv('DATABASE_URL'),
+  // Supabase — when set the server reads published articles from the shared
+  // Supabase project that the Admin CMS writes to, so both apps stay in sync.
+  SUPABASE_URL: readEnv('SUPABASE_URL', readEnv('VITE_SUPABASE_URL')),
+  SUPABASE_ANON_KEY: readEnv('SUPABASE_ANON_KEY', readEnv('VITE_SUPABASE_ANON_KEY')),
   RESEND_API_KEY: readEnv('RESEND_API_KEY'),
   RESEND_FROM_EMAIL: readEnv('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
   RESEND_FROM_NAME: readEnv('RESEND_FROM_NAME', 'NexTake Desk'),

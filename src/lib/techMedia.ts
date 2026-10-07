@@ -7,7 +7,7 @@ import { supabase } from "./supabase";
 export interface PublishedTechMedia {
   id: string;
   source_id: string | null;
-  media_type: "video" | "interview";
+  media_type: "video" | "interview" | "short";
   title: string;
   description: string;
   category: string;
@@ -26,44 +26,23 @@ export interface PublishedTechMedia {
 export async function getPublishedTechMedia(): Promise<PublishedTechMedia[]> {
   if (!supabase) return [];
 
-  const [mediaResult, articleResult] = await Promise.all([
-    supabase
-      .from("tech_media")
-      .select("id, source_id, media_type, title, description, category, video_path, thumbnail_url, host_name, guest_name, guest_role, guest_company, duration_seconds, tags, published_at")
-      .eq("status", "published")
-      .order("published_at", { ascending: false }),
-    supabase
-      .from("articles")
-      .select("id, title, excerpt, summary, category, video_url, image, cover_image_url, author, tags, published_at, created_at, content_type, type, status")
-      .eq("status", "published")
-      .eq("content_type", "media")
-      .not("video_url", "is", null)
-      .order("published_at", { ascending: false }),
-  ]);
+  const { data, error } = await supabase
+    .from("articles")
+    .select("id, title, excerpt, summary, category, video_url, image, cover_image_url, author, tags, published_at, created_at, content_type, media_placement, status")
+    .eq("status", "published")
+    .eq("content_type", "media")
+    .not("video_url", "is", null)
+    .order("published_at", { ascending: false });
 
-  if (mediaResult.error && mediaResult.error.code !== "42P01" && mediaResult.error.code !== "PGRST205") {
-    console.error("Unable to load uploaded Tech media:", mediaResult.error);
-  }
-  if (articleResult.error) {
-    console.error("Unable to load published CMS videos:", articleResult.error);
+  if (error) {
+    console.error("Unable to load published CMS videos:", error);
+    return [];
   }
 
-  const uploadedMedia = await Promise.all((mediaResult.data ?? []).map(async (record) => {
-    const { data: signedVideo, error: storageError } = await supabase.storage
-      .from("nextake-tech-media")
-      .createSignedUrl(String(record.video_path), 60 * 60);
-    if (storageError) {
-      console.error(`Unable to load video ${record.id}:`, storageError);
-      return null;
-    }
-    return { ...record, video_url: signedVideo.signedUrl } as PublishedTechMedia;
-  }));
-
-  const cmsMedia: PublishedTechMedia[] = (articleResult.data ?? []).map((record) => {
+  const cmsMedia: PublishedTechMedia[] = (data ?? []).map((record) => {
     const tags = Array.isArray(record.tags) ? record.tags.map(String) : [];
-    const placement = String(record.type ?? "").toLowerCase() === "interview" ||
-      String(record.category ?? "").toLowerCase().includes("interview") || tags.includes("interview")
-      ? "interview"
+    const placement = record.media_placement === "short" || record.media_placement === "interview" || record.media_placement === "video"
+      ? record.media_placement
       : "video";
     return {
       id: String(record.id),
@@ -85,11 +64,7 @@ export async function getPublishedTechMedia(): Promise<PublishedTechMedia[]> {
     };
   });
 
-  const allMedia = [
-    ...uploadedMedia.filter((record): record is PublishedTechMedia => record !== null),
-    ...cmsMedia,
-  ];
-  return allMedia.sort((left, right) => right.published_at.localeCompare(left.published_at));
+  return cmsMedia.sort((left, right) => right.published_at.localeCompare(left.published_at));
 }
 
 export function getYouTubeEmbedUrl(value: string): string | null {
@@ -168,13 +143,13 @@ export function toInterviewItem(record: PublishedTechMedia, fallbackThumbnail: s
 
 export function toPublishedShorts(records: PublishedTechMedia[]) {
   return records
-    .filter((record) => record.media_type === "video")
+    .filter((record) => record.media_type !== "interview")
     .map((record, index) => toShortItem(record, SHORTS_LIST[index % SHORTS_LIST.length].thumbnail));
 }
 
 export function getUnreplacedShorts(records: PublishedTechMedia[]) {
   const replacedIds = new Set(records
-    .filter((record) => record.media_type === "video")
+    .filter((record) => record.media_type !== "interview")
     .map((record) => record.source_id)
     .filter(Boolean));
   return SHORTS_LIST.filter((item) => !replacedIds.has(item.id));

@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/article/:path*", "destination": "/index.html" },
+    { "source": "/startup/:path*", "destination": "/index.html" },
+    { "source": "/latest", "destination": "/index.html" },
+    { "source": "/explore", "destination": "/index.html" },
+    { "source": "/shorts", "destination": "/index.html" },
+    { "source": "/interview", "destination": "/index.html" },
+    { "source": "/startups", "destination": "/index.html" },
+    { "source": "/events", "destination": "/index.html" }
   ]
 }
