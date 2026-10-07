@@ -341,24 +341,49 @@ export async function getArticleById(id: string): Promise<Article | null> {
   }
 
   if (supabase) {
-    const { data: articleData, error: articleError } = await supabase
-      .from("articles")
-      .select("*")
-      .eq("id", id)
-      .eq("status", "published")
-      .maybeSingle();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let articleQuery = supabase.from("articles").select("*").eq("status", "published");
+    articleQuery = isUuid ? articleQuery.eq("id", id) : articleQuery.eq("slug", id);
+
+    const { data: articleData, error: articleError } = await articleQuery.maybeSingle();
 
     if (articleError) {
       console.error("Error loading article by ID:", articleError);
     }
 
     if (articleData) {
-      const article = articleData as Article;
+      const raw = articleData as Record<string, any>;
+      const resolvedContent =
+        raw.content ||
+        raw.body ||
+        raw.syndicated_body ||
+        raw.summary ||
+        raw.excerpt ||
+        raw.description ||
+        "";
+      const resolvedExcerpt =
+        raw.excerpt ||
+        raw.summary ||
+        raw.description ||
+        resolvedContent.slice(0, 200);
+
       return {
-        ...article,
-        image: article.image || article.imageUrl || article.image_url || article.coverImage || article.coverImageUrl || article.cover_image || article.cover_image_url || article.featured_image || "",
-        published_at: article.published_at ?? article.created_at ?? article.date ?? null,
-        created_at: article.created_at ?? article.published_at ?? article.date ?? null,
+        ...(raw as Article),
+        content: resolvedContent,
+        excerpt: resolvedExcerpt,
+        description: resolvedExcerpt,
+        image:
+          raw.image ||
+          raw.imageUrl ||
+          raw.image_url ||
+          raw.coverImage ||
+          raw.coverImageUrl ||
+          raw.cover_image ||
+          raw.cover_image_url ||
+          raw.featured_image ||
+          "",
+        published_at: raw.published_at ?? raw.created_at ?? raw.date ?? null,
+        created_at: raw.created_at ?? raw.published_at ?? raw.date ?? null,
       } as Article;
     }
 

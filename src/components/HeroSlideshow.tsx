@@ -74,13 +74,13 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
 
         headline: article.title,
 
-        summary: article.excerpt,
+        summary: article.excerpt || article.summary || article.description || "Read the latest technology dispatch on NexTake.",
 
         date: article.created_at
           ? new Date(article.created_at).toLocaleDateString()
           : "",
 
-        image: article.image,
+        image: article.image || article.cover_image_url || article.imageUrl || article.coverImage || HERO_SLIDESHOW_STORIES[index % HERO_SLIDESHOW_STORIES.length]?.image || "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80",
 
         readTime: article.read_time || "5 min read",
 

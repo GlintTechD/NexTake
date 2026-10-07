@@ -32,7 +32,7 @@ export async function getPublishedTechMedia(): Promise<PublishedTechMedia[]> {
     .eq("status", "published")
     .eq("content_type", "media")
     .not("video_url", "is", null)
-    .order("published_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("Unable to load published CMS videos:", error);
