@@ -26,18 +26,29 @@ export interface PublishedTechMedia {
 export async function getPublishedTechMedia(): Promise<PublishedTechMedia[]> {
   if (!supabase) return [];
 
-  const { data, error } = await supabase
-    .from("tech_media")
-    .select("id, source_id, media_type, title, description, category, video_path, thumbnail_url, host_name, guest_name, guest_role, guest_company, duration_seconds, tags, published_at")
-    .eq("status", "published")
-    .order("published_at", { ascending: false });
+  const [mediaResult, articleResult] = await Promise.all([
+    supabase
+      .from("tech_media")
+      .select("id, source_id, media_type, title, description, category, video_path, thumbnail_url, host_name, guest_name, guest_role, guest_company, duration_seconds, tags, published_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false }),
+    supabase
+      .from("articles")
+      .select("id, title, excerpt, summary, category, video_url, image, cover_image_url, author, tags, published_at, created_at, content_type, type, status")
+      .eq("status", "published")
+      .eq("content_type", "media")
+      .not("video_url", "is", null)
+      .order("published_at", { ascending: false }),
+  ]);
 
-  if (error) {
-    console.error("Unable to load published Tech media:", error);
-    return [];
+  if (mediaResult.error && mediaResult.error.code !== "42P01" && mediaResult.error.code !== "PGRST205") {
+    console.error("Unable to load uploaded Tech media:", mediaResult.error);
+  }
+  if (articleResult.error) {
+    console.error("Unable to load published CMS videos:", articleResult.error);
   }
 
-  const media = await Promise.all((data ?? []).map(async (record) => {
+  const uploadedMedia = await Promise.all((mediaResult.data ?? []).map(async (record) => {
     const { data: signedVideo, error: storageError } = await supabase.storage
       .from("nextake-tech-media")
       .createSignedUrl(String(record.video_path), 60 * 60);
@@ -48,7 +59,53 @@ export async function getPublishedTechMedia(): Promise<PublishedTechMedia[]> {
     return { ...record, video_url: signedVideo.signedUrl } as PublishedTechMedia;
   }));
 
-  return media.filter((record): record is PublishedTechMedia => record !== null);
+  const cmsMedia: PublishedTechMedia[] = (articleResult.data ?? []).map((record) => {
+    const tags = Array.isArray(record.tags) ? record.tags.map(String) : [];
+    const placement = String(record.type ?? "").toLowerCase() === "interview" ||
+      String(record.category ?? "").toLowerCase().includes("interview") || tags.includes("interview")
+      ? "interview"
+      : "video";
+    return {
+      id: String(record.id),
+      source_id: null,
+      media_type: placement,
+      title: String(record.title ?? ""),
+      description: String(record.excerpt ?? record.summary ?? ""),
+      category: String(record.category ?? (placement === "interview" ? "Interviews" : "Videos")),
+      video_path: "",
+      video_url: String(record.video_url ?? ""),
+      thumbnail_url: String(record.image ?? record.cover_image_url ?? ""),
+      host_name: String(record.author ?? ""),
+      guest_name: "",
+      guest_role: "",
+      guest_company: "",
+      duration_seconds: 0,
+      tags,
+      published_at: String(record.published_at ?? record.created_at ?? ""),
+    };
+  });
+
+  const allMedia = [
+    ...uploadedMedia.filter((record): record is PublishedTechMedia => record !== null),
+    ...cmsMedia,
+  ];
+  return allMedia.sort((left, right) => right.published_at.localeCompare(left.published_at));
+}
+
+export function getYouTubeEmbedUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    let videoId = "";
+    if (host === "youtu.be") videoId = url.pathname.split("/").filter(Boolean)[0] ?? "";
+    else if (host === "youtube.com" || host === "m.youtube.com") {
+      if (url.pathname === "/watch") videoId = url.searchParams.get("v") ?? "";
+      else if (["/shorts/", "/live/"].some((prefix) => url.pathname.startsWith(prefix))) videoId = url.pathname.split("/")[2] ?? "";
+    }
+    return /^[A-Za-z0-9_-]{11}$/.test(videoId) ? `https://www.youtube.com/embed/${videoId}` : null;
+  } catch {
+    return null;
+  }
 }
 
 function formatDuration(seconds: number) {

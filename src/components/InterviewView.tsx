@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScreenView } from '../types';
 import { ALL_INTERVIEWS, InterviewItem, InterviewChapter, InterviewComment } from '../data/interviewData';
-import { getPublishedTechMedia, getUnreplacedInterviews, toInterviewItem, type PublishedTechMedia } from '../lib/techMedia';
+import { getPublishedTechMedia, getUnreplacedInterviews, getYouTubeEmbedUrl, toInterviewItem, type PublishedTechMedia } from '../lib/techMedia';
 import {
   Play,
   Pause,
@@ -593,7 +593,15 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
                   ref={videoContainerRef}
                   className="relative aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl group border border-slate-800"
                 >
-                  {currentInterview.videoUrl ? (
+                  {currentInterview.videoUrl && getYouTubeEmbedUrl(currentInterview.videoUrl) ? (
+                    <iframe
+                      src={`${getYouTubeEmbedUrl(currentInterview.videoUrl)}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=1`}
+                      title={currentInterview.title}
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 h-full w-full border-0"
+                    />
+                  ) : currentInterview.videoUrl ? (
                     <video
                       ref={videoRef}
                       src={currentInterview.videoUrl}

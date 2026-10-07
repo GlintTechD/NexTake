@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScreenView, ShortItem } from '../types';
 import { SHORTS_LIST } from '../data/mockData';
-import { getPublishedTechMedia, getUnreplacedShorts, toPublishedShorts, type PublishedTechMedia } from '../lib/techMedia';
+import { getPublishedTechMedia, getUnreplacedShorts, getYouTubeEmbedUrl, toPublishedShorts, type PublishedTechMedia } from '../lib/techMedia';
 import {
   ChevronLeft,
   Camera,
@@ -447,7 +447,15 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
             onClick={togglePlay}
             className="absolute inset-0 z-0 bg-[#070b12] cursor-pointer overflow-hidden"
           >
-            {currentShort.videoUrl ? (
+            {currentShort.videoUrl && getYouTubeEmbedUrl(currentShort.videoUrl) ? (
+              <iframe
+                src={`${getYouTubeEmbedUrl(currentShort.videoUrl)}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=1`}
+                title={currentShort.title}
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full border-0"
+              />
+            ) : currentShort.videoUrl ? (
               <video
                 ref={videoRef}
                 src={currentShort.videoUrl}

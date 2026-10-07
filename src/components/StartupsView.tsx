@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ScreenView } from '../types';
 import { STARTUP_PROFILES } from '../data/startupProfilesData';
+import { getPublishedStartups, type PublicStartup } from '../lib/publicIntelligence';
 import {
   Share2,
   Search,
@@ -206,6 +207,15 @@ export const StartupsView: React.FC<StartupsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [shareToast, setShareToast] = useState<string | null>(null);
+  const [cmsStartups, setCmsStartups] = useState<PublicStartup[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void getPublishedStartups().then((startups) => {
+      if (active) setCmsStartups(startups);
+    });
+    return () => { active = false; };
+  }, []);
 
   // Startup Profiles Carousel State
   const startupProfilesList = useMemo(() => Object.values(STARTUP_PROFILES), []);
@@ -438,6 +448,32 @@ export const StartupsView: React.FC<StartupsViewProps> = ({
           </div>
         </div>
       </div>
+      {cmsStartups.length > 0 && (
+        <section className="border-b border-slate-200 bg-slate-50">
+          <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+            <div className="mb-4 flex items-baseline justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Company intelligence</p>
+                <h2 className="mt-1 text-xl font-extrabold text-black">Latest startup profiles</h2>
+              </div>
+              <span className="text-xs text-slate-500">{cmsStartups.length} profiles</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {cmsStartups.map((startup) => (
+                <article key={startup.id} className="flex min-w-0 gap-3 border-t-2 border-emerald-600 bg-white p-4">
+                  {startup.logoUrl ? <img src={startup.logoUrl} alt="" className="h-11 w-11 shrink-0 rounded object-cover" /> : null}
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-bold text-black">{startup.name}</h3>
+                    <p className="mt-0.5 text-xs font-semibold text-emerald-700">{startup.industry}{startup.stage ? ` · ${startup.stage}` : ''}</p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-600">{startup.description || [startup.headquarters, startup.country].filter(Boolean).join(', ')}</p>
+                    {startup.website && <a href={startup.website} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs font-bold text-black underline underline-offset-2">Company website</a>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* LEFT COLUMN: DOMINANT LEAD STORY (Col-span 7) */}

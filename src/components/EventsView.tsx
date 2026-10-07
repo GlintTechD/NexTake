@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, CalendarDays, MapPin } from 'lucide-react';
 import { EVENTS, EVENTS_LAST_CHECKED } from '../data/eventsData';
+import { getPublishedEvents } from '../lib/publicIntelligence';
 import {
   formatDate,
   formatDateRange,
@@ -185,10 +186,22 @@ const EventCard: React.FC<EventItemProps> = ({ event, status }) => (
 
 export const EventsView: React.FC<EventsViewProps> = ({ onOpenContact }) => {
   const [region, setRegion] = useState<RegionFilter>('All');
+  const [cmsEvents, setCmsEvents] = useState<TechEvent[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void getPublishedEvents().then((events) => {
+      if (active) setCmsEvents(events);
+    });
+    return () => { active = false; };
+  }, []);
 
   // "Today" is read once per visit; events that have already ended are dropped.
   const todayISO = useMemo(() => toISODate(new Date()), []);
-  const upcoming = useMemo(() => getUpcomingEvents(EVENTS, todayISO), [todayISO]);
+  const upcoming = useMemo(() => {
+    const cmsIds = new Set(cmsEvents.map((event) => event.id));
+    return getUpcomingEvents([...cmsEvents, ...EVENTS.filter((event) => !cmsIds.has(event.id))], todayISO);
+  }, [cmsEvents, todayISO]);
   const regions = useMemo(() => getRegionsWithEvents(upcoming), [upcoming]);
 
   const visible = region === 'All' ? upcoming : upcoming.filter((event) => event.region === region);
