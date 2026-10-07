@@ -217,6 +217,7 @@ export async function getLatestArticles(): Promise<LatestArticle[]> {
     .from("articles")
     .select("*")
     .eq("status", "published")
+    .not("content_type", "eq", "media")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -413,6 +414,10 @@ export async function getPublishedBigStories(): Promise<Article[]> {
     .from("articles")
     .select("*")
     .eq("status", "published")
+    // Exclude YouTube Shorts, Interviews, and other media-type entries
+    // so only editorial articles appear in The Big Story section.
+    .not("content_type", "eq", "media")
+    .is("media_placement", null)
     .order("created_at", { ascending: false });
 
   if (error) {

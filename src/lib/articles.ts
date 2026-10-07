@@ -9,6 +9,10 @@ export async function getPublishedArticles() {
     .from("articles")
     .select("*")
     .eq("status", "published")
+    // Exclude YouTube Shorts, Interviews, and other media-type entries
+    // so the hero slideshow only shows editorial articles.
+    .not("content_type", "eq", "media")
+    .is("media_placement", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -17,4 +21,4 @@ export async function getPublishedArticles() {
   }
 
   return data ?? [];
-}
+}

@@ -176,38 +176,47 @@ const fetchSupabaseRows = async (
 
 /** Load every published article/blog source, with no six-item cap or mock data. */
 export const getLatestPublishedStories = async (): Promise<LatestStory[]> => {
-  const sources: Array<{ name: string; source: LatestSource; load: () => Promise<unknown[]> }> = [
-    { name: 'posting portal', source: 'portal', load: fetchPortalContent },
+  // Whether Supabase is configured — when it is, the portal endpoint is optional.
+  const hasSupabase = Boolean(supabase);
+
+  const sources: Array<{ name: string; source: LatestSource; optional: boolean; load: () => Promise<unknown[]> }> = [
+    { name: 'posting portal', source: 'portal', optional: hasSupabase, load: fetchPortalContent },
   ];
 
-  if (supabase) {
+  if (hasSupabase) {
     sources.push(
-      { name: 'articles', source: 'article', load: () => fetchSupabaseRows('articles', 'created_at') },
-      { name: 'Daily Edit', source: 'daily-edit', load: () => fetchSupabaseRows('daily_tips', 'published_at') },
+      { name: 'articles', source: 'article', optional: false, load: () => fetchSupabaseRows('articles', 'created_at') },
+      { name: 'Daily Edit', source: 'daily-edit', optional: true, load: () => fetchSupabaseRows('daily_tips', 'published_at') },
     );
   }
 
   const results = await Promise.allSettled(sources.map((source) => source.load()));
-  let successfulSources = 0;
+  let requiredSucceeded = 0;
   const stories: LatestStory[] = [];
 
   results.forEach((result, index) => {
     const source = sources[index];
     if (result.status === 'rejected') {
-      console.error(`Unable to load published ${source.name}:`, result.reason);
+      // Only log as an error when the source was required; otherwise just a debug note.
+      if (!source.optional) {
+        console.error(`Unable to load published ${source.name}:`, result.reason);
+      }
       return;
     }
 
-    successfulSources += 1;
+    if (!source.optional) requiredSucceeded += 1;
+
     for (const row of result.value) {
       const story = normalizeLatestStory(row, source.source);
       if (story) stories.push(story);
     }
   });
 
-  if (successfulSources === 0) {
+  // If all required sources failed AND no optional sources produced stories, bail out.
+  if (requiredSucceeded === 0 && stories.length === 0) {
     throw new Error('Unable to reach any published content source.');
   }
 
   return mergeLatestStories(stories);
 };
+
