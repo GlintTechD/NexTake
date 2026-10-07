@@ -4,7 +4,7 @@ import path from 'node:path';
 import express from 'express';
 import { config, isProduction } from './config';
 import { buildOtpHash, buildResendFromAddress, createOtp, constantTimeEqual, isExpired, signSessionId } from './auth';
-import { initializeDatabase, isDatabaseEnabled, pool } from './db';
+import { ensureDatabaseInitialized, initializeDatabase, isDatabaseEnabled, pool } from './db';
 import {
   createContentRecord,
   deleteContentRecord,
@@ -91,28 +91,43 @@ type ArticleEngagement = {
 
 const engagementFilePath = path.join(process.cwd(), 'server', '.engagement.json');
 const articleEngagement = new Map<string, ArticleEngagement>();
+const onVercel = Boolean(process.env.VERCEL);
 
 const persistArticleEngagement = () => {
-  fs.writeFileSync(
-    engagementFilePath,
-    JSON.stringify(Object.fromEntries(articleEngagement), null, 2),
-    'utf8',
-  );
+  if (onVercel) return;
+  try {
+    fs.writeFileSync(
+      engagementFilePath,
+      JSON.stringify(Object.fromEntries(articleEngagement), null, 2),
+      'utf8',
+    );
+  } catch (error) {
+    const code = (error as any)?.code;
+    if (code === 'EROFS' || code === 'ENOENT' || code === 'EPERM') {
+      console.warn('[engagement] Skipping file persistence (read-only or missing directory).');
+    } else {
+      console.warn('[engagement] Could not persist engagement data:', error);
+    }
+  }
 };
 
-try {
-  const storedEngagement = JSON.parse(fs.readFileSync(engagementFilePath, 'utf8')) as Record<string, ArticleEngagement>;
-  for (const [articleId, engagement] of Object.entries(storedEngagement)) {
-    articleEngagement.set(articleId, {
-      views: Number(engagement.views ?? 0),
-      likes: Number(engagement.likes ?? 0),
-      comments: Number(engagement.comments ?? engagement.commentTexts?.length ?? 0),
-      saves: Number(engagement.saves ?? 0),
-      commentTexts: normalizeComments(Array.isArray(engagement.commentTexts) ? engagement.commentTexts : []),
-    });
+if (!onVercel) {
+  try {
+    if (fs.existsSync(engagementFilePath)) {
+      const storedEngagement = JSON.parse(fs.readFileSync(engagementFilePath, 'utf8')) as Record<string, ArticleEngagement>;
+      for (const [articleId, engagement] of Object.entries(storedEngagement)) {
+        articleEngagement.set(articleId, {
+          views: Number(engagement.views ?? 0),
+          likes: Number(engagement.likes ?? 0),
+          comments: Number(engagement.comments ?? engagement.commentTexts?.length ?? 0),
+          saves: Number(engagement.saves ?? 0),
+          commentTexts: normalizeComments(Array.isArray(engagement.commentTexts) ? engagement.commentTexts : []),
+        });
+      }
+    }
+  } catch (error) {
+    console.warn('[engagement] Skipping stored engagement load (file missing or invalid).', error);
   }
-} catch {
-  // Start with empty engagement data when the file is missing or invalid.
 }
 
 const getOrCreateArticleEngagement = (articleId: string) => {
@@ -387,6 +402,15 @@ const sendContactEmail = async (submission: ContactSubmission) => {
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use(async (_request, _response, next) => {
+  try {
+    await ensureDatabaseInitialized();
+  } catch (error) {
+    console.error('[db] middleware init failed', error);
+  }
+  next();
+});
+
 app.get('/api/health', (_request, response) => {
   response.json({ ok: true, status: 'healthy', timestamp: new Date().toISOString() });
 });
@@ -588,102 +612,112 @@ app.get('/api/public/activity', async (_request, response) => {
 });
 
 app.get('/api/public/article/:id/engagement', async (request, response) => {
-  const articleId = request.params.id;
-  const engagement = getOrCreateArticleEngagement(articleId);
-  const orderedComments = normalizeComments(engagement.commentTexts).slice().reverse();
+  try {
+    const articleId = request.params.id;
+    const engagement = getOrCreateArticleEngagement(articleId);
+    const orderedComments = normalizeComments(engagement.commentTexts).slice().reverse();
 
-  response.json({
-    ok: true,
-    id: articleId,
-    views: engagement.views,
-    likes: engagement.likes,
-    comments: engagement.comments,
-    saves: engagement.saves,
-    commentTexts: orderedComments,
-    commentPageSize: 5,
-    commentPageCount: Math.max(1, Math.ceil(orderedComments.length / 5)) || 0,
-    commentPage: 1,
-  });
+    response.json({
+      ok: true,
+      id: articleId,
+      views: engagement.views,
+      likes: engagement.likes,
+      comments: engagement.comments,
+      saves: engagement.saves,
+      commentTexts: orderedComments,
+      commentPageSize: 5,
+      commentPageCount: Math.max(1, Math.ceil(orderedComments.length / 5)) || 0,
+      commentPage: 1,
+    });
+  } catch (error) {
+    console.error('[engagement] GET failed', error);
+    response.status(500).json({ ok: false, message: 'Unable to load article engagement.' });
+  }
 });
 
 app.post('/api/public/article/:id/engagement', async (request, response) => {
-  const articleId = request.params.id;
-  const action = String(request.body?.action ?? '').toLowerCase();
-  const engagement = getOrCreateArticleEngagement(articleId);
+  try {
+    const articleId = request.params.id;
+    const action = String(request.body?.action ?? '').toLowerCase();
+    const engagement = getOrCreateArticleEngagement(articleId);
 
-  if (action === 'view') {
-    engagement.views += 1;
-    persistArticleEngagement();
-    recordPublicActivity({
-      action: 'Article viewed',
-      target: articleId,
-      user: 'Public Site',
-      type: 'system',
-    });
-  }
-
-  if (action === 'like') {
-    engagement.likes += 1;
-    persistArticleEngagement();
-    recordPublicActivity({
-      action: 'Article liked',
-      target: articleId,
-      user: 'Public Site',
-      type: 'system',
-    });
-  }
-
-  if (action === 'unlike') {
-    engagement.likes = Math.max(0, engagement.likes - 1);
-    persistArticleEngagement();
-  }
-
-  if (action === 'save') {
-    engagement.saves += 1;
-    persistArticleEngagement();
-    recordPublicActivity({
-      action: 'Article saved',
-      target: articleId,
-      user: 'Public Site',
-      type: 'system',
-    });
-  }
-
-  if (action === 'unsave') {
-    engagement.saves = Math.max(0, engagement.saves - 1);
-    persistArticleEngagement();
-  }
-
-  if (action === 'comment') {
-    const comment = String(request.body?.comment ?? '').trim();
-    if (comment) {
-      const comments = normalizeComments(engagement.commentTexts);
-      comments.push(comment);
-      engagement.commentTexts = comments;
-      engagement.comments = engagement.commentTexts.length;
+    if (action === 'view') {
+      engagement.views += 1;
       persistArticleEngagement();
       recordPublicActivity({
-        action: 'New article comment',
+        action: 'Article viewed',
         target: articleId,
         user: 'Public Site',
         type: 'system',
       });
     }
-  }
 
-  const orderedComments = normalizeComments(engagement.commentTexts).slice().reverse();
-  response.json({
-    ok: true,
-    id: articleId,
-    views: engagement.views,
-    likes: engagement.likes,
-    comments: engagement.comments,
-    saves: engagement.saves,
-    commentTexts: orderedComments,
-    commentPageSize: 5,
-    commentPageCount: Math.max(1, Math.ceil(orderedComments.length / 5)) || 0,
-    commentPage: 1,
-  });
+    if (action === 'like') {
+      engagement.likes += 1;
+      persistArticleEngagement();
+      recordPublicActivity({
+        action: 'Article liked',
+        target: articleId,
+        user: 'Public Site',
+        type: 'system',
+      });
+    }
+
+    if (action === 'unlike') {
+      engagement.likes = Math.max(0, engagement.likes - 1);
+      persistArticleEngagement();
+    }
+
+    if (action === 'save') {
+      engagement.saves += 1;
+      persistArticleEngagement();
+      recordPublicActivity({
+        action: 'Article saved',
+        target: articleId,
+        user: 'Public Site',
+        type: 'system',
+      });
+    }
+
+    if (action === 'unsave') {
+      engagement.saves = Math.max(0, engagement.saves - 1);
+      persistArticleEngagement();
+    }
+
+    if (action === 'comment') {
+      const comment = String(request.body?.comment ?? '').trim();
+      if (comment) {
+        const comments = normalizeComments(engagement.commentTexts);
+        comments.push(comment);
+        engagement.commentTexts = comments;
+        engagement.comments = engagement.commentTexts.length;
+        persistArticleEngagement();
+        recordPublicActivity({
+          action: 'New article comment',
+          target: articleId,
+          user: 'Public Site',
+          type: 'system',
+        });
+      }
+    }
+
+    const orderedComments = normalizeComments(engagement.commentTexts).slice().reverse();
+    response.json({
+      ok: true,
+      id: articleId,
+      views: engagement.views,
+      likes: engagement.likes,
+      comments: engagement.comments,
+      saves: engagement.saves,
+      commentTexts: orderedComments,
+      commentPageSize: 5,
+      commentPageCount: Math.max(1, Math.ceil(orderedComments.length / 5)) || 0,
+      commentPage: 1,
+    });
+  } catch (error) {
+    console.error('[engagement] POST failed', error);
+    response.status(500).json({ ok: false, message: 'Unable to update article engagement.' });
+  }
 });
 
 app.post('/api/public/newsletter', async (request, response) => {

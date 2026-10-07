@@ -10,6 +10,69 @@ import {
 
 const contentTable = 'content';
 
+type PgContentRow = Record<string, unknown>;
+
+const str = (v: unknown, fallback = ''): string => (v == null ? fallback : String(v));
+
+const boolVal = (v: unknown, fallback = false): boolean => {
+  if (v === null || v === undefined) return fallback;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return v === 't' || v === 'true' || v === '1';
+  return Boolean(v);
+};
+
+const strArr = (v: unknown): string[] => {
+  if (Array.isArray(v)) return v.map(String);
+  if (typeof v === 'string' && v.trim()) {
+    try {
+      const parsed = JSON.parse(v);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {
+      return v.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+
+const contentTypeFor = (raw: unknown): ContentRecord['contentType'] => {
+  const v = str(raw, 'blog');
+  if (v === 'media') return 'media';
+  if (v === 'event') return 'event';
+  if (v === 'news') return 'news';
+  if (v === 'announcement') return 'announcement';
+  if (v === 'project') return 'project';
+  if (v === 'opportunity') return 'opportunity';
+  return 'blog';
+};
+
+const statusFor = (raw: unknown): ContentRecord['status'] => {
+  const v = str(raw, 'draft');
+  if (v === 'published' || v === 'scheduled' || v === 'unpublished') return v;
+  return 'draft';
+};
+
+const pgRowToContentRecord = (row: PgContentRow): ContentRecord => ({
+  id: str(row.id),
+  title: str(row.title),
+  slug: str(row.slug),
+  description: str(row.description),
+  body: str(row.body),
+  contentType: contentTypeFor(row.content_type ?? row.contentType),
+  status: statusFor(row.status),
+  author: str(row.author, 'NexTake'),
+  category: str(row.category, 'General'),
+  tags: strArr(row.tags),
+  coverImage: str(row.cover_image ?? row.coverImage) || undefined,
+  externalLink: str(row.external_link ?? row.externalLink) || undefined,
+  videoUrl: str(row.video_url ?? row.videoUrl) || undefined,
+  scheduledFor: row.scheduled_for ?? row.scheduledFor ? str(row.scheduled_for ?? row.scheduledFor) : undefined,
+  publishedAt: row.published_at ?? row.publishedAt ? str(row.published_at ?? row.publishedAt) : undefined,
+  createdAt: str(row.created_at ?? row.createdAt, new Date().toISOString()),
+  updatedAt: str(row.updated_at ?? row.updatedAt ?? row.created_at ?? row.createdAt, new Date().toISOString()),
+  featured: boolVal(row.featured, false),
+  featuredPriority: Number(row.featured_priority ?? row.featuredPriority ?? 0),
+});
+
 const withUniqueSlug = async (baseSlug: string, ignoreId?: string) => {
   let slug = normalizeSlug(baseSlug || 'untitled');
   if (!slug) {
@@ -80,7 +143,7 @@ export const createContentRecord = async (input: Partial<ContentRecord> & Pick<C
     ],
   );
 
-  return result.rows[0] as ContentRecord;
+  return pgRowToContentRecord(result.rows[0]);
 };
 
 export const getPublishedContent = async () => {
@@ -103,7 +166,7 @@ export const getPublishedContent = async () => {
     `,
   );
 
-  return result.rows as ContentRecord[];
+  return result.rows.map(pgRowToContentRecord);
 };
 
 export const getContentBySlug = async (slug: string) => {
@@ -124,7 +187,7 @@ export const getContentBySlug = async (slug: string) => {
     [slug],
   );
 
-  return (result.rows[0] as ContentRecord) ?? null;
+  return result.rows[0] ? pgRowToContentRecord(result.rows[0]) : null;
 };
 
 export const getContentById = async (id: string) => {
@@ -141,7 +204,7 @@ export const getContentById = async (id: string) => {
     [id],
   );
 
-  return (result.rows[0] as ContentRecord) ?? null;
+  return result.rows[0] ? pgRowToContentRecord(result.rows[0]) : null;
 };
 
 export const listAdminContent = async () => {
@@ -153,7 +216,7 @@ export const listAdminContent = async () => {
     `SELECT * FROM ${contentTable} ORDER BY updated_at DESC`,
   );
 
-  return result.rows as ContentRecord[];
+  return result.rows.map(pgRowToContentRecord);
 };
 
 export const updateContentRecord = async (id: string, input: Partial<ContentRecord>) => {
@@ -214,7 +277,7 @@ export const updateContentRecord = async (id: string, input: Partial<ContentReco
     ],
   );
 
-  return result.rows[0] as ContentRecord;
+  return pgRowToContentRecord(result.rows[0]);
 };
 
 export const deleteContentRecord = async (id: string) => {

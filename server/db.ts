@@ -8,10 +8,11 @@ export const pool = config.DATABASE_URL
     })
   : null;
 
-export const initializeDatabase = async () => {
-  if (!pool) {
-    return;
-  }
+let dbInitializationPromise: Promise<void> | null = null;
+let dbInitialized = false;
+
+const runSchema = async () => {
+  if (!pool) return;
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS content (
@@ -71,6 +72,27 @@ export const initializeDatabase = async () => {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
+};
+
+export const initializeDatabase = async () => {
+  await ensureDatabaseInitialized();
+};
+
+export const ensureDatabaseInitialized = async (): Promise<void> => {
+  if (!pool || dbInitialized) return;
+  if (dbInitializationPromise) {
+    await dbInitializationPromise;
+    return;
+  }
+  dbInitializationPromise = (async () => {
+    try {
+      await runSchema();
+      dbInitialized = true;
+    } finally {
+      dbInitializationPromise = null;
+    }
+  })();
+  await dbInitializationPromise;
 };
 
 export const isDatabaseEnabled = () => Boolean(pool);
