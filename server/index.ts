@@ -17,6 +17,7 @@ import {
 import { isPubliclyVisible, normalizeSlug } from './content';
 import { getLatestCommentsPage, normalizeComments } from './engagement';
 
+
 declare global {
   namespace Express {
     interface Request {
@@ -64,7 +65,7 @@ interface SessionRecord {
   expiresAt: number;
 }
 
-const app = express();
+export const app = express();
 const port = config.PORT;
 
 const otpChallenges = new Map<string, OtpChallenge>();

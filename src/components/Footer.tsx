@@ -147,7 +147,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
 
                   <div className="flex items-center justify-center space-x-2 text-[10px] font-mono text-slate-500 pt-1">
                     <Shield className="w-3.5 h-3.5 text-emerald-400/80 shrink-0" />
-                    <span>Zero spam. No tracking pixels. Cryptographic one-click unsubscribe.</span>
                   </div>
                 </form>
               )}
@@ -377,7 +376,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-start font-mono text-[11px] text-slate-500 space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-            <span>© 2025 NexTake Media Group. All rights reserved.</span>
+            <span>© 2026 NexTake Media Group. All rights reserved.</span>
           </div>
         </div>
       </div>

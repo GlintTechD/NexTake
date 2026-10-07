@@ -11,6 +11,7 @@ export interface LatestStory {
   content: string;
   author: string;
   image: string;
+  videoUrl?: string;
   publishedAt: string | null;
   timeAgo: string;
   readTime: string;
@@ -79,7 +80,7 @@ export const normalizeLatestStory = (
 
   const rawType = asText(firstValue(record, 'contentType', 'content_type', 'type'));
   const normalizedType = rawType.toLowerCase().replace(/[\s_-]+/g, '-');
-  if (source === 'portal' && !['article', 'blog', 'news', 'daily-edit', 'big-story', 'latest'].includes(normalizedType)) {
+  if (source === 'portal' && !['article', 'blog', 'news', 'announcement', 'media', 'daily-edit', 'big-story', 'latest'].includes(normalizedType)) {
     return null;
   }
 
@@ -125,6 +126,7 @@ export const normalizeLatestStory = (
     content: body,
     author: asText(record.author),
     image: asText(firstValue(record, 'image', 'imageUrl', 'image_url', 'coverImage', 'coverImageUrl', 'cover_image', 'cover_image_url', 'featured_image')),
+    videoUrl: asText(firstValue(record, 'videoUrl', 'video_url')) || undefined,
     publishedAt,
     timeAgo: publishedAt ? formatTimeAgo(publishedAt) : 'Recently published',
     readTime: getReadTime(firstValue(record, 'readTime', 'read_time'), body || description),

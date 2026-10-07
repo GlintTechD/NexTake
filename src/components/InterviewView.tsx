@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScreenView } from '../types';
 import { ALL_INTERVIEWS, InterviewItem, InterviewChapter, InterviewComment } from '../data/interviewData';
-import { getPublishedTechMedia, getUnreplacedInterviews, getYouTubeEmbedUrl, toInterviewItem, type PublishedTechMedia } from '../lib/techMedia';
+import { getPublishedTechMedia, getUnreplacedInterviews, toInterviewItem, type PublishedTechMedia } from '../lib/techMedia';
+import { getPublishedEmbeddedMedia, type EmbeddedMediaRecord } from '../lib/embeddedMedia';
+import { isYouTubeVideoUrl, toYouTubeEmbedUrl } from '../lib/video';
 import {
   Play,
   Pause,
@@ -82,14 +84,41 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
   const [commentInput, setCommentInput] = useState('');
   const [commentsMap, setCommentsMap] = useState<Record<string, InterviewComment[]>>({});
   const [publishedMedia, setPublishedMedia] = useState<PublishedTechMedia[]>([]);
+  const [embeddedMedia, setEmbeddedMedia] = useState<EmbeddedMediaRecord[]>([]);
 
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const interviews = [
+    ...embeddedMedia.filter((record) => record.kind === 'interview').map((record) => ({
+      ...toInterviewItem({
+        id: record.id,
+        source_id: null,
+        media_type: 'interview',
+        title: record.title,
+        description: record.description,
+        category: record.category,
+        video_path: '',
+        video_url: record.videoUrl,
+        thumbnail_url: record.thumbnail,
+        host_name: record.author,
+        guest_name: record.guestName,
+        guest_role: record.guestRole,
+        guest_company: record.guestCompany,
+        duration_seconds: record.durationSeconds,
+        tags: record.tags,
+        published_at: record.publishedAt,
+      }, ALL_INTERVIEWS[0].thumbnail),
+      publishedAt: record.publishedAt,
+    })),
     ...publishedMedia.filter((record) => record.media_type === 'interview').map((record) => toInterviewItem(record, ALL_INTERVIEWS[0].thumbnail)),
     ...getUnreplacedInterviews(publishedMedia),
-  ];
+  ].sort((first, second) => {
+    if (!first.publishedAt && !second.publishedAt) return 0;
+    if (!first.publishedAt) return 1;
+    if (!second.publishedAt) return -1;
+    return new Date(second.publishedAt).getTime() - new Date(first.publishedAt).getTime();
+  });
 
   const categories = [
     'All',
@@ -123,8 +152,11 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    void getPublishedTechMedia().then((records) => {
-      if (isMounted) setPublishedMedia(records);
+    void Promise.all([getPublishedTechMedia(), getPublishedEmbeddedMedia()]).then(([records, embedded]) => {
+      if (isMounted) {
+        setPublishedMedia(records);
+        setEmbeddedMedia(embedded);
+      }
     });
     return () => { isMounted = false; };
   }, []);
@@ -445,7 +477,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
               </div>
 
               {/* Category Pills Strip */}
-              <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-4 no-scrollbar">
+              <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-4 swipe-scrollbar">
                 {categories.map((cat) => (
                   <button
                     key={cat}
@@ -593,13 +625,13 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
                   ref={videoContainerRef}
                   className="relative aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl group border border-slate-800"
                 >
-                  {currentInterview.videoUrl && getYouTubeEmbedUrl(currentInterview.videoUrl) ? (
+                  {currentInterview.videoUrl && isYouTubeVideoUrl(currentInterview.videoUrl) ? (
                     <iframe
-                      src={`${getYouTubeEmbedUrl(currentInterview.videoUrl)}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=1`}
+                      src={toYouTubeEmbedUrl(currentInterview.videoUrl)}
                       title={currentInterview.title}
-                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
-                      className="absolute inset-0 h-full w-full border-0"
+                      className="absolute inset-0 w-full h-full"
                     />
                   ) : currentInterview.videoUrl ? (
                     <video
@@ -632,7 +664,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
 
                   {/* Big Play / Pause Overlay Icon in center */}
-                  <button
+                  {!isYouTubeVideoUrl(currentInterview.videoUrl) && <button
                     onClick={() => setIsPlaying((prev) => !prev)}
                     className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform"
                   >
@@ -641,7 +673,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({
                         <Play className="w-8 h-8 fill-white ml-1" />
                       </div>
                     )}
-                  </button>
+                  </button>}
 
                   {/* ================================================================= */}
                   {/* BOTTOM PLAYER CONTROLS BAR (Matches Image 2) */}

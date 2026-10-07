@@ -132,6 +132,7 @@ export function toShortItem(record: PublishedTechMedia, fallbackThumbnail: strin
     videoType: "silicon",
     tags: record.tags.length ? record.tags : [record.category],
     videoUrl: record.video_url,
+    publishedAt: record.published_at,
   };
 }
 
@@ -161,6 +162,7 @@ export function toInterviewItem(record: PublishedTechMedia, fallbackThumbnail: s
     comments: [],
     tags: record.tags,
     videoUrl: record.video_url,
+    publishedAt: record.published_at,
   };
 }
 

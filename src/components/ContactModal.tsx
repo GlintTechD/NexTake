@@ -23,9 +23,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
 }) => {
   const [inquiryType, setInquiryType] = useState<InquiryType>("editorial");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [organization, setOrganization] = useState("");
+  const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -47,9 +48,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
+          name: `${firstName} ${lastName}`.trim(),
           email,
-          organization,
+          phone,
+          organization: "",
           inquiryType,
           message,
         }),
@@ -74,9 +76,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   setIsSubmitted(false);
   setIsSending(false);
   setError("");
-  setName("");
+  setFirstName("");
+  setLastName("");
   setEmail("");
-  setOrganization("");
+  setPhone("");
   setMessage("");
   setInquiryType("editorial");
   onClose();
@@ -93,21 +96,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         id="contact-modal-dialog"
       >
-        {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <div className="flex items-center space-x-2">
-            <span className="font-mono text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Next Edit • Direct Desk
-            </span>
-          </div>
-          <button
-            onClick={handleReset}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
-            title="Close Contact Modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <button onClick={handleReset} className="absolute right-4 top-4 z-10 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="Close Contact Modal"><X className="w-5 h-5" /></button>
 
         {isSubmitted ? (
           <div className="p-8 text-center space-y-4">
@@ -144,62 +133,31 @@ export const ContactModal: React.FC<ContactModalProps> = ({
           <form
             ref={formRef}
             onSubmit={handleSubmit}
-            className="p-6 sm:p-8 space-y-5 bg-white"
+            className="p-7 sm:p-10 space-y-5 bg-white"
           >
             <input type="hidden" name="inquiry_type" value={inquiryType} />
             <div>
               <h2 className="text-2xl font-black tracking-tight text-slate-950">
                 Contact Us
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Direct lines for story pitches, secure whistleblower tips, press
-                inquiries, and corporate partnerships.
-              </p>
-            </div>
-
-            {/* Inquiry Selector */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-mono font-semibold text-slate-600 uppercase tracking-wider">
-                Inquiry Routing
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: "editorial", label: "Editorial" },
-                  { id: "tip", label: "Leak / Tip" },
-                  { id: "press", label: "Press Desk" },
-                  { id: "corporate", label: "Partnership" },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setInquiryType(tab.id as InquiryType)}
-                    className={`py-2 px-3 rounded-lg text-xs font-mono font-semibold border text-center transition-all ${
-                      inquiryType === tab.id
-                        ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm font-bold"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+              <p className="text-xs text-slate-500 mt-1">Send us a message and we&apos;ll get back to you soon.</p>
             </div>
 
             {/* Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="block text-[11px] font-mono font-semibold text-slate-700">
-                  Your Name *
+                  First Name *
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="text"
-                    name="name"
+                    name="first_name"
                     required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First Name"
                     className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all"
                   />
                 </div>
@@ -207,17 +165,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
               <div className="space-y-1">
                 <label className="block text-[11px] font-mono font-semibold text-slate-700">
-                  Work / Signal Email *
+                  Last Name *
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
-                    type="email"
+                    type="text"
                     required
-                    name="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@organization.com"
+                    name="last_name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last Name"
                     className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all"
                   />
                 </div>
@@ -226,52 +184,27 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
             <div className="space-y-1">
               <label className="block text-[11px] font-mono font-semibold text-slate-700">
-                Organization / Affiliation
+                Email Address *
               </label>
               <div className="relative">
-                <Building className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
-                  type="text"
-                  value={organization}
-                  name="organization"
-                  onChange={(e) => setOrganization(e.target.value)}
-                  placeholder="Autonomous Labs / University / Fund"
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  type="email" required name="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Eg. example@gmail.com"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
               <label className="block text-[11px] font-mono font-semibold text-slate-700">
-                Message / Brief *
+                Phone Number
               </label>
               <div className="relative">
-                <MessageSquare className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <textarea
-                  required
-                  rows={3}
-                  value={message}
-                  name="message"
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder={
-                    inquiryType === "tip"
-                      ? "Share encrypted tip details, verification hashes, or document references..."
-                      : "Outline your question, story lead, or partnership proposal..."
-                  }
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 resize-none transition-all"
-                ></textarea>
+                <input type="tel" name="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Eg. +1 800 000000" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all" />
               </div>
             </div>
 
-            {inquiryType === "tip" && (
-              <div className="flex items-center space-x-2 text-[11px] font-mono text-emerald-800 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
-                <Shield className="w-4 h-4 shrink-0 text-emerald-600" />
-                <span>
-                  Do not send confidential material here. Submissions use our
-                  email provider and are not end-to-end encrypted.
-                </span>
-              </div>
-            )}
+            <div className="space-y-1"><label className="block text-[11px] font-mono font-semibold text-slate-700">Message *</label><textarea required rows={5} value={message} name="message" onChange={(e) => setMessage(e.target.value)} placeholder="Please enter your comments..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 resize-none transition-all" /></div>
 
             {error && (
   <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
@@ -280,22 +213,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 )}
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] font-mono text-slate-500">
-                Email submission • Response &lt; 24h
-              </span>
-              <button
+            <div className="flex justify-center pt-2"><button
                 type="submit"
                 disabled={isSending}
-                className="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-mono font-bold text-xs tracking-wider flex items-center space-x-2 transition-all shadow-sm active:scale-95"
+                className="px-8 py-3 rounded-full bg-slate-950 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-mono font-bold text-xs tracking-wider flex items-center space-x-2 transition-all shadow-sm active:scale-95"
               >
-                <span>{isSending ? "Transmitting..." : "Transmit"}</span>
+                <span>{isSending ? "Submitting..." : "Submit"}</span>
 
                 <Send
                   className={`w-3.5 h-3.5 ${isSending ? "animate-pulse" : ""}`}
                 />
-              </button>
-            </div>
+              </button></div>
           </form>
         )}
       </div>

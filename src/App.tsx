@@ -97,7 +97,7 @@ export default function App() {
     'search-top',
     'short-1',
   ]);
-  const [exploreQuery, setExploreQuery] = useState<string>('Fintech');
+  const [exploreQuery, setExploreQuery] = useState<string>('');
   const [isDailyEditOpen, setIsDailyEditOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
 
