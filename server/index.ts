@@ -941,6 +941,6 @@ const startServer = async () => {
   });
 };
 
-if (process.env.VERCEL !== '1') {
+if (!process.env.VERCEL) {
   void startServer();
 }
