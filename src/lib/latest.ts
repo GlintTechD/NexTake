@@ -80,6 +80,11 @@ export const normalizeLatestStory = (
 
   const rawType = asText(firstValue(record, 'contentType', 'content_type', 'type'));
   const normalizedType = rawType.toLowerCase().replace(/[\s_-]+/g, '-');
+
+  // Never include YouTube Shorts / media-only records in the editorial feed
+  const mediaPlacement = asText(firstValue(record, 'mediaPlacement', 'media_placement'));
+  if (normalizedType === 'media' || mediaPlacement === 'short') return null;
+
   if (source === 'portal' && !['article', 'blog', 'news', 'announcement', 'media', 'daily-edit', 'big-story', 'latest'].includes(normalizedType)) {
     return null;
   }
@@ -164,11 +169,18 @@ const fetchSupabaseRows = async (
 ): Promise<unknown[]> => {
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  const query = supabase
     .from(table)
     .select('*')
     .eq('status', 'published')
     .order(orderColumn, { ascending: false });
+
+  // Exclude YouTube Shorts / media-only records from the editorial feed
+  const filteredQuery = table === 'articles'
+    ? query.not('content_type', 'eq', 'media').is('media_placement', null)
+    : query;
+
+  const { data, error } = await filteredQuery;
 
   if (error) throw error;
   return data ?? [];

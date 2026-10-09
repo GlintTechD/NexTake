@@ -67,6 +67,11 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [publishedItems, setPublishedItems] = useState<SearchResultItem[]>([]);
+
+  // Sync search query when the parent passes a new initialQuery (e.g. from navbar search)
+  useEffect(() => {
+    setSearchQuery(initialQuery);
+  }, [initialQuery]);
   const [activeFilterTab, setActiveFilterTab] = useState('ALL');
   const [followedPeople, setFollowedPeople] = useState<Record<string, boolean>>({
     'Patrick Collison': true,
