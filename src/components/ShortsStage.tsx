@@ -154,7 +154,26 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
     return new Date(second.publishedAt).getTime() - new Date(first.publishedAt).getTime();
   }), [embeddedMedia, publishedMedia]);
 
-  const currentShort: ShortItem = shorts[currentIndex] || shorts[0];
+  const fallbackShort: ShortItem = useMemo(() => ({
+    id: 'empty',
+    episodeNumber: 0,
+    category: 'General',
+    subCategory: 'General',
+    title: 'No Shorts',
+    description: '',
+    author: 'NexTake',
+    authorRole: '',
+    views: '0',
+    duration: '0:00',
+    durationSeconds: 0,
+    likes: '0',
+    shares: '0',
+    thumbnail: '',
+    videoType: 'network',
+    tags: [],
+  }), []);
+
+  const currentShort: ShortItem = shorts[currentIndex] || shorts[0] || fallbackShort;
   const isCurrentLiked = !!likedShorts[currentShort.id];
   const isCurrentDisliked = !!dislikedShorts[currentShort.id];
   const isSubscribed = !!subscribedChannels[currentShort.author];
@@ -417,6 +436,27 @@ export const ShortsStage: React.FC<ShortsStageProps> = ({
     const num = parseFloat(raw.replace(/[^0-9.]/g, '')) || 1.4;
     return isCurrentLiked ? (num + 0.1).toFixed(1) + 'K' : raw;
   }, [currentShort.likes, isCurrentLiked]);
+
+  if (shorts.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#05070b] flex flex-col items-center justify-center p-6 text-white select-none">
+        <button
+          onClick={onClose}
+          className="absolute top-6 left-6 p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white transition-colors"
+          title="Back"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <p className="text-sm font-mono text-slate-400 mb-6">No published shorts available yet.</p>
+        <button
+          onClick={onClose}
+          className="px-5 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-mono font-bold text-xs rounded transition-colors"
+        >
+          Return to Feed
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-[#05070b] flex items-center justify-center overflow-hidden select-none">

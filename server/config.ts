@@ -39,7 +39,7 @@ if (onVercel && rawViteSupabaseAnonKey && !serverSupabaseAnonKey) {
 }
 
 export const config = {
-  APP_URL: readEnv('APP_URL', 'http://localhost:4100'),
+  APP_URL: readEnv('APP_URL', 'http://localhost:3000'),
   ADMIN_USERNAME: readEnv('ADMIN_USERNAME', 'Glint'),
   ADMIN_EMAIL: readEnv('ADMIN_EMAIL', 'martins14747@gmail.com'),
   CONTACT_RECIPIENT_EMAIL: readEnv('CONTACT_RECIPIENT_EMAIL', readEnv('ADMIN_EMAIL', 'martins14747@gmail.com')),
@@ -51,7 +51,7 @@ export const config = {
   RESEND_FROM_NAME: readEnv('RESEND_FROM_NAME', 'NexTake Desk'),
   SESSION_SECRET: readEnv('SESSION_SECRET', 'nextedit-dev-secret-change-me'),
   NODE_ENV: readEnv('NODE_ENV', 'development'),
-  PORT: Number(readEnv('PORT', '4101')),
+  PORT: Number(readEnv('PORT', '3000')),
   HOST: readEnv('HOST', '0.0.0.0'),
 };
 

@@ -50,15 +50,17 @@ interface InterviewViewProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
   savedIds: string[];
   onToggleSave: (id: string) => void;
+  initialInterviewId?: string | null;
 }
 
 export const InterviewView: React.FC<InterviewViewProps> = ({
   onNavigate,
   savedIds,
   onToggleSave,
+  initialInterviewId,
 }) => {
   // Navigation / View State
-  const [activeInterviewId, setActiveInterviewId] = useState<string | null>(null); // null = Browse Grid View (Image 1), string = Player Watch View (Image 2)
+  const [activeInterviewId, setActiveInterviewId] = useState<string | null>(initialInterviewId ?? null); // null = Browse Grid View (Image 1), string = Player Watch View (Image 2)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryChip, setSelectedCategoryChip] = useState('All');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);

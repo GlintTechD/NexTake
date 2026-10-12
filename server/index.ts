@@ -941,29 +941,7 @@ app.delete('/api/admin/content/:id', requireAdmin, async (request, response) => 
   }
 });
 
-const distPath = path.resolve(process.cwd(), 'dist');
-const indexHtmlPath = path.resolve(process.cwd(), 'index.html');
-
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get('*', (request, response, next) => {
-    if (request.path.startsWith('/api')) {
-      next();
-      return;
-    }
-    response.sendFile(path.join(distPath, 'index.html'));
-  });
-} else if (fs.existsSync(indexHtmlPath)) {
-  app.get('*', (request, response, next) => {
-    if (request.path.startsWith('/api')) {
-      next();
-      return;
-    }
-    response.sendFile(indexHtmlPath);
-  });
-}
-
-const startServer = async () => {
+export const startServer = async () => {
   try {
     await initializeDatabase();
   } catch (error) {
@@ -971,10 +949,11 @@ const startServer = async () => {
   }
 
   app.listen(port, config.HOST, () => {
-    console.log(`NextEdit API listening on http://${config.HOST}:${port}`);
+    console.log(`NexTake API listening on http://${config.HOST}:${port}`);
   });
 };
 
-if (!process.env.VERCEL) {
+const isDirectRun = process.argv[1] && (process.argv[1].endsWith('server/index.ts') || process.argv[1].endsWith('server/index.js'));
+if (!process.env.VERCEL && isDirectRun) {
   void startServer();
 }

@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ScreenView } from '../types';
 import { subscribeToNewsletter } from '../lib/newsletter';
 import { HeroSlideshow } from './HeroSlideshow';
-import { getPublishedTechMedia, getUnreplacedShorts, toPublishedShorts, type PublishedTechMedia } from '../lib/techMedia';
+import { getPublishedTechMedia, toPublishedShorts, toInterviewItem, type PublishedTechMedia } from '../lib/techMedia';
+import { getPublishedEmbeddedMedia, type EmbeddedMediaRecord } from '../lib/embeddedMedia';
+import { ALL_INTERVIEWS, type InterviewItem } from '../data/interviewData';
 import {
   FEATURED_ARTICLE,
-  SHORTS_LIST,
-  FEATURED_INTERVIEW,
   LATEST_DISPATCHES,
   OPERATORS_LIST,
 } from '../data/mockData';
@@ -99,10 +99,6 @@ import {
   Plus,
   ExternalLink,
 } from 'lucide-react';
-import {
-  getDailyEditItems,
-  type DailyEditItem,
-} from '../lib/supabase';
 
 interface HomeFeedProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
@@ -123,6 +119,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   const [latestLoading, setLatestLoading] = useState(true);
   const [publishedBigStories, setPublishedBigStories] = useState<SupabaseArticle[]>([]);
   const [publishedMedia, setPublishedMedia] = useState<PublishedTechMedia[]>([]);
+  const [embeddedMedia, setEmbeddedMedia] = useState<EmbeddedMediaRecord[]>([]);
 
   const [activeCategoryTab, setActiveCategoryTab] = useState("All");
 
@@ -136,8 +133,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   const [emailSubscribed, setEmailSubscribed] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
-  const [dailyEditItems, setDailyEditItems] = useState<DailyEditItem[]>([]);
-  const [dailyEditLoading, setDailyEditLoading] = useState(true);
 
   const tickerAlerts = latestArticles.length > 0
     ? latestArticles.slice(0, 6).map((article) => `${article.category} • ${article.title}`)
@@ -227,11 +222,123 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    void getPublishedTechMedia().then((records) => {
-      if (isMounted) setPublishedMedia(records);
+    void Promise.all([getPublishedTechMedia(), getPublishedEmbeddedMedia()]).then(([tech, embedded]) => {
+      if (isMounted) {
+        setPublishedMedia(tech);
+        setEmbeddedMedia(embedded);
+      }
     });
     return () => { isMounted = false; };
   }, []);
+
+  // 3. Remove hardcoded shorts - only real uploaded/published shorts
+  const publishedShorts = React.useMemo(() => {
+    const fromEmbedded = embeddedMedia
+      .filter((record) => record.kind === 'short')
+      .map((record) => ({
+        id: record.id,
+        title: record.title,
+        category: record.category || 'Tech',
+        duration: `${Math.floor((record.durationSeconds || 60) / 60)}:${String((record.durationSeconds || 60) % 60).padStart(2, '0')}`,
+        author: record.author || 'NexTake',
+        views: 'New',
+        thumbnail: record.thumbnail || '',
+        videoUrl: record.videoUrl,
+        publishedAt: record.publishedAt,
+      }));
+
+    const fromCms = toPublishedShorts(publishedMedia).map((s) => ({
+      id: s.id,
+      title: s.title,
+      category: s.category || 'Tech',
+      duration: s.duration,
+      author: s.author || 'NexTake',
+      views: s.views || 'New',
+      thumbnail: s.thumbnail,
+      videoUrl: s.videoUrl,
+      publishedAt: s.publishedAt,
+    }));
+
+    return [...fromEmbedded, ...fromCms].sort((a, b) => {
+      const timeA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const timeB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [embeddedMedia, publishedMedia]);
+
+  // 4. Ensure newly uploaded interviews replace the initial one as the top (newer ones first) and ensure only 4 are displayed
+  const displayInterviews = React.useMemo(() => {
+    const fallbackThumb = ALL_INTERVIEWS[0]?.thumbnail || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80';
+
+    const uploadedFromEmbedded: InterviewItem[] = embeddedMedia
+      .filter((record) => record.kind === 'interview')
+      .map((record) => ({
+        id: record.id,
+        episodeNumber: 0,
+        title: record.title,
+        category: record.category || 'Interviews',
+        thumbnail: record.thumbnail || fallbackThumb,
+        videoUrl: record.videoUrl,
+        duration: `${Math.floor((record.durationSeconds || 1800) / 60)}:${String((record.durationSeconds || 1800) % 60).padStart(2, '0')}`,
+        durationSeconds: record.durationSeconds || 1800,
+        views: 'New',
+        viewCountRaw: 0,
+        uploadedAgo: 'Recently',
+        guest: {
+          name: record.guestName || record.author || 'NexTake Guest',
+          role: record.guestRole || 'Executive',
+          company: record.guestCompany || record.category || 'Technology',
+          avatar: record.thumbnail || fallbackThumb,
+          subscribers: '',
+        },
+        host: {
+          name: record.author || 'NexTake Editorial',
+          role: 'Host',
+        },
+        executiveSummary: record.description || '',
+        featuredQuote: { text: '', timestamp: '00:00' },
+        chapters: [],
+        comments: [],
+        tags: record.tags || [],
+        publishedAt: record.publishedAt || new Date().toISOString(),
+      }));
+
+    const uploadedFromCms: InterviewItem[] = publishedMedia
+      .filter((record) => record.media_type === 'interview')
+      .map((record) => toInterviewItem(record, fallbackThumb));
+
+    // Baseline mock interviews have older timestamps so newly uploaded ones replace them at the top
+    const initialInterviews: InterviewItem[] = ALL_INTERVIEWS.map((item, idx) => ({
+      ...item,
+      publishedAt: item.publishedAt || new Date(Date.parse('2025-01-01T00:00:00Z') - idx * 86400000).toISOString(),
+    }));
+
+    const combined = [
+      ...uploadedFromEmbedded,
+      ...uploadedFromCms,
+      ...initialInterviews,
+    ];
+
+    const seen = new Set<string>();
+    const unique = combined.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+
+    // Newer ones first
+    unique.sort((a, b) => {
+      const timeA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const timeB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    // Only 4 are displayed
+    return unique.slice(0, 4);
+  }, [embeddedMedia, publishedMedia]);
+
+  const topInterview = displayInterviews[0];
+  const secondaryInterviews = displayInterviews.slice(1, 4);
 
   const activeBigStory: {
     id: string;
@@ -267,20 +374,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   const filteredArticles = latestArticles.filter((article) =>
     activeCategoryTab === "All" || article.category.toLowerCase() === activeCategoryTab.toLowerCase(),
   );
-  useEffect(() => {
-    const loadDailyEdit = async () => {
-      setDailyEditLoading(true);
-
-      const items = await getDailyEditItems();
-
-      console.log("Daily Editorial from Supabase:", items);
-
-      setDailyEditItems(items);
-      setDailyEditLoading(false);
-    };
-
-    loadDailyEdit();
-  }, []);
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 pb-20">
@@ -309,62 +402,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         onToggleSave={onToggleSave}
       />
 
-      {/* 3. YOUR DAILY EDIT - 5 things worth knowing today */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-b border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-slate-200 gap-2">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">
-              Your Daily Edit
-            </h2>
-            <p className="text-xs text-slate-500">5 things worth knowing today.</p>
-          </div>
-
-        </div>
-
-        {/* 5 Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {dailyEditLoading ? (
-            <div className="col-span-full py-10 text-center">
-              <p className="text-xs font-mono text-slate-400">
-                Loading today's editorial...
-              </p>
-            </div>
-          ) : dailyEditItems.length === 0 ? (
-            <div className="col-span-full py-10 text-center">
-              <p className="text-xs font-mono text-slate-400">
-                No published editorial stories available.
-              </p>
-            </div>
-          ) : (
-            dailyEditItems.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onNavigate('article', item.id)}
-                className="group flex cursor-pointer flex-col overflow-hidden rounded-lg border border-slate-200 bg-white text-left transition-all hover:border-slate-400 hover:shadow-md"
-                aria-label={`Open full story: ${item.title}`}
-              >
-                {item.image && <img src={item.image} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105" />}
-                <div className="flex flex-1 flex-col justify-between p-4">
-                  <div>
-                    <div className="mb-2 flex items-center justify-between text-xs font-mono">
-                      <span className="text-xl font-black text-slate-300 group-hover:text-emerald-600">{item.num}</span>
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{item.tag}</span>
-                    </div>
-                    <h3 className="mb-2 text-sm font-bold leading-snug text-slate-900 group-hover:text-emerald-700">{item.title}</h3>
-                    <p className="line-clamp-3 text-[11px] leading-relaxed text-slate-500">{item.description}</p>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[10px] font-mono text-slate-400">
-                    <span>{item.timeAgo}</span><span>{item.readTime}</span>
-                  </div>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* 4. NEXT EDIT SHORTS - Tech stories in under 60 seconds (matching 6.png) */}
+      {/* 3. NEXT EDIT SHORTS - Tech stories in under 60 seconds */}
       <section className="bg-[#090d14] text-white py-12 border-b border-[#1b2533]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
@@ -386,52 +424,66 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             </button>
           </div>
 
-          {/* 5 Vertical Preview Reels */}
+          {/* Vertical Preview Reels - only uploaded/published shorts */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[...toPublishedShorts(publishedMedia), ...getUnreplacedShorts(publishedMedia)].map((short) => (
-              <div
-                key={short.id}
-                onClick={() => onNavigate('shorts')}
-                className="group relative rounded-lg overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/60 transition-all cursor-pointer aspect-[9/14] flex flex-col justify-between p-3"
-              >
-                <img
-                  src={short.thumbnail}
-                  alt={short.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-
-                {/* Top Badge */}
-                <div className="relative z-10 flex items-center justify-between text-[10px] font-mono">
-                  <span className="px-1.5 py-0.5 rounded bg-black/70 text-emerald-400 border border-emerald-500/30">
-                    {short.category}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded bg-black/70 text-slate-300">
-                    {short.duration.split(' ')[0]}
-                  </span>
-                </div>
-
-                {/* Center Hover Play Icon */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <div className="w-12 h-12 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 transform scale-90 group-hover:scale-100 transition-transform">
-                    <Play className="w-5 h-5 fill-current ml-0.5" />
-                  </div>
-                </div>
-
-                {/* Bottom Content */}
-                <div className="relative z-10">
-                  <h3 className="text-xs font-bold text-white line-clamp-2 leading-snug group-hover:text-emerald-300 transition-colors mb-2">
-                    {short.title}
-                  </h3>
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                    <span>{short.author}</span>
-                    <span className="text-emerald-400 font-bold">{short.views}</span>
-                  </div>
-                </div>
+            {publishedShorts.length === 0 ? (
+              <div className="col-span-full py-12 text-center border border-dashed border-slate-800 rounded-lg">
+                <p className="text-xs font-mono text-slate-400">
+                  No published shorts available yet. Upload a short to see it featured here.
+                </p>
               </div>
-            ))}
+            ) : (
+              publishedShorts.map((short) => (
+                <div
+                  key={short.id}
+                  onClick={() => onNavigate('shorts', short.id)}
+                  className="group relative rounded-lg overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/60 transition-all cursor-pointer aspect-[9/14] flex flex-col justify-between p-3"
+                >
+                  {short.thumbnail ? (
+                    <img
+                      src={short.thumbnail}
+                      alt={short.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
+                      <Play className="w-8 h-8 text-slate-700" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                  {/* Top Badge */}
+                  <div className="relative z-10 flex items-center justify-between text-[10px] font-mono">
+                    <span className="px-1.5 py-0.5 rounded bg-black/70 text-emerald-400 border border-emerald-500/30">
+                      {short.category}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/70 text-slate-300">
+                      {short.duration?.split(' ')[0] || '1:00'}
+                    </span>
+                  </div>
+
+                  {/* Center Hover Play Icon */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div className="w-12 h-12 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 transform scale-90 group-hover:scale-100 transition-transform">
+                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                    </div>
+                  </div>
+
+                  {/* Bottom Content */}
+                  <div className="relative z-10">
+                    <h3 className="text-xs font-bold text-white line-clamp-2 leading-snug group-hover:text-emerald-300 transition-colors mb-2">
+                      {short.title}
+                    </h3>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                      <span>{short.author}</span>
+                      <span className="text-emerald-400 font-bold">{short.views}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -721,179 +773,154 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           </button>
         </div>
 
-        {/* Featured Interview Card (Dario Amodei) */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center p-6 sm:p-8">
-            {/* Thumbnail with Play Trigger */}
-            <div
-              onClick={() => onNavigate('interview')}
-              className="lg:col-span-6 relative rounded-lg overflow-hidden bg-slate-950 aspect-video group cursor-pointer"
-            >
-              <img
-                src={FEATURED_INTERVIEW.thumbnail}
-                alt={FEATURED_INTERVIEW.title}
-                className="w-full h-full object-cover opacity-80 group-hover:scale-102 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+        {/* Featured Interview Card - newly uploaded replace the initial one as the top */}
+        {topInterview && (
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center p-6 sm:p-8">
+              {/* Thumbnail with Play Trigger */}
+              <div
+                onClick={() => onNavigate('interview', topInterview.id)}
+                className="lg:col-span-6 relative rounded-lg overflow-hidden bg-slate-950 aspect-video group cursor-pointer"
+              >
+                <img
+                  src={topInterview.thumbnail}
+                  alt={topInterview.title}
+                  className="w-full h-full object-cover opacity-80 group-hover:scale-102 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
 
-              <div className="absolute top-3 left-3">
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-black/70 text-emerald-400 border border-emerald-500/40">
-                  Episode #42 • 4K HDR
-                </span>
-              </div>
+                <div className="absolute top-3 left-3">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-black/70 text-emerald-400 border border-emerald-500/40">
+                    {topInterview.category || 'Interview'} • Featured
+                  </span>
+                </div>
 
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/40 group-hover:scale-110 transition-transform">
-                  <Play className="w-6 h-6 fill-current ml-0.5" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/40 group-hover:scale-110 transition-transform">
+                    <Play className="w-6 h-6 fill-current ml-0.5" />
+                  </div>
+                </div>
+
+                <div className="absolute bottom-3 right-3">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-black/80 text-white">
+                    {topInterview.duration || '35:45 min'}
+                  </span>
                 </div>
               </div>
 
-              <div className="absolute bottom-3 right-3">
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-black/80 text-white">
-                  35:45 min
-                </span>
+              {/* Content Details */}
+              <div className="lg:col-span-6 space-y-4">
+                <div className="text-xs font-mono text-slate-500">
+                  <span className="text-emerald-700 font-bold">Featured spotlight</span>
+                </div>
+
+                <h3
+                  onClick={() => onNavigate('interview', topInterview.id)}
+                  className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors cursor-pointer leading-tight"
+                >
+                  {topInterview.title}
+                </h3>
+
+                <div className="flex items-center space-x-3 py-1">
+                  <img
+                    src={topInterview.guest.avatar || topInterview.thumbnail}
+                    alt={topInterview.guest.name}
+                    className="w-10 h-10 rounded-full object-cover border border-slate-300"
+                  />
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 font-mono">
+                      {topInterview.guest.name}
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      {topInterview.guest.role}{topInterview.guest.company ? `, ${topInterview.guest.company}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                  {topInterview.executiveSummary || 'Deep-dive conversation exploring emerging frontiers, system scale, and executive monographs.'}
+                </p>
+
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => onNavigate('interview', topInterview.id)}
+                    className="inline-flex items-center space-x-2 px-4 py-2 rounded bg-slate-950 text-white text-xs font-mono font-bold hover:bg-emerald-600 transition-colors"
+                  >
+                    <Headphones className="w-3.5 h-3.5" />
+                    <span>Listen to dispatch</span>
+                  </button>
+
+                  <button
+                    onClick={() => onNavigate('interview', topInterview.id)}
+                    className="inline-flex items-center space-x-1.5 px-3 py-2 rounded border border-slate-300 text-slate-700 text-xs font-mono hover:bg-slate-50 transition-colors"
+                  >
+                    <span>Full transcript</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Content Details */}
-            <div className="lg:col-span-6 space-y-4">
-              <div className="text-xs font-mono text-slate-500">
-                <span className="text-emerald-700 font-bold">Featured spotlight</span>
-              </div>
-
-              <h3
-                onClick={() => onNavigate('interview')}
-                className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors cursor-pointer leading-tight"
-              >
-                {FEATURED_INTERVIEW.title}
-              </h3>
-
-              <div className="flex items-center space-x-3 py-1">
-                <img
-                  src={FEATURED_INTERVIEW.guest.avatar}
-                  alt={FEATURED_INTERVIEW.guest.name}
-                  className="w-10 h-10 rounded-full object-cover border border-slate-300"
-                />
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 font-mono">
-                    {FEATURED_INTERVIEW.guest.name}
+        {/* 3 Secondary Interview Cards - ensuring only 4 are displayed in total */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {secondaryInterviews.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => onNavigate('interview', item.id)}
+              className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-slate-400 transition-all cursor-pointer group flex flex-col justify-between"
+            >
+              <div>
+                <div className="aspect-video bg-slate-900 relative">
+                  <img
+                    src={item.thumbnail}
+                    alt={item.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
+                  />
+                  <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-black/80 text-white px-1.5 py-0.5 rounded">
+                    {item.duration || '28:15 min'}
+                  </span>
+                </div>
+                <div className="p-4 space-y-1">
+                  <span className="text-[10px] font-mono text-emerald-700 font-bold block truncate">
+                    {item.guest.name} • {item.guest.company || item.category}
+                  </span>
+                  <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-2">
+                    {item.title}
                   </h4>
-                  <p className="text-[11px] text-slate-500">
-                    {FEATURED_INTERVIEW.guest.role}, {FEATURED_INTERVIEW.guest.company}
+                  <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                    {item.executiveSummary || `${item.guest.role} discussing future architecture and strategy.`}
                   </p>
                 </div>
               </div>
-
-              <p className="text-xs text-slate-600 leading-relaxed">
-                In this deep-dive conversation, Dario discusses recursive self-improvement guardrails, compute scaling walls, and how Anthropic plans to manage the emergence of autonomous code synthesizers.
-              </p>
-
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => onNavigate('interview')}
-                  className="inline-flex items-center space-x-2 px-4 py-2 rounded bg-slate-950 text-white text-xs font-mono font-bold hover:bg-emerald-600 transition-colors"
-                >
-                  <Headphones className="w-3.5 h-3.5" />
-                  <span>Listen to audio dispatch</span>
-                </button>
-
-                <button
-                  onClick={() => onNavigate('interview')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-2 rounded border border-slate-300 text-slate-700 text-xs font-mono hover:bg-slate-50 transition-colors"
-                >
-                  <span>Full transcript</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
+              <div className="p-4 pt-0">
+                <div className="flex gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate('interview', item.id);
+                    }}
+                    className="text-[10px] font-mono font-bold text-white bg-slate-950 hover:bg-emerald-600 transition-colors rounded px-2.5 py-1"
+                  >
+                    Listen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate('interview', item.id);
+                    }}
+                    className="text-[10px] font-mono text-slate-700 border border-slate-300 hover:bg-slate-50 transition-colors rounded px-2.5 py-1"
+                  >
+                    Transcript
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* 3 Secondary Interview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div
-            onClick={() => onNavigate('interview')}
-            className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-slate-400 transition-all cursor-pointer group"
-          >
-            <div className="aspect-video bg-slate-900 relative">
-              <img
-                src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80"
-                alt="Fei-Fei Li"
-                className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
-              />
-              <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-black/80 text-white px-1.5 py-0.5 rounded">
-                28:15 min
-              </span>
-            </div>
-            <div className="p-4 space-y-1">
-              <span className="text-[10px] font-mono text-emerald-700 font-bold">
-                Fei-Fei Li • Stanford / World Labs
-              </span>
-              <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                The Future of Human-AI Interaction Models
-              </h4>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono font-bold text-white bg-slate-950 rounded px-2 py-1">Listen</button>
-                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono text-slate-700 border border-slate-300 rounded px-2 py-1">Transcript</button>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => onNavigate('interview')}
-            className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-slate-400 transition-all cursor-pointer group"
-          >
-            <div className="aspect-video bg-slate-900 relative">
-              <img
-                src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=600&q=80"
-                alt="Patrick Collison"
-                className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
-              />
-              <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-black/80 text-white px-1.5 py-0.5 rounded">
-                34:20 min
-              </span>
-            </div>
-            <div className="p-4 space-y-1">
-              <span className="text-[10px] font-mono text-emerald-700 font-bold">
-                Patrick Collison • Stripe
-              </span>
-              <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                The Programmable Economy and Autonomous Agent Billing
-              </h4>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono font-bold text-white bg-slate-950 rounded px-2 py-1">Listen</button>
-                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono text-slate-700 border border-slate-300 rounded px-2 py-1">Transcript</button>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => onNavigate('interview')}
-            className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:border-slate-400 transition-all cursor-pointer group"
-          >
-            <div className="aspect-video bg-slate-900 relative">
-              <img
-                src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=80"
-                alt="Jensen Huang"
-                className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
-              />
-              <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-black/80 text-white px-1.5 py-0.5 rounded">
-                32:50 min
-              </span>
-            </div>
-            <div className="p-4 space-y-1">
-              <span className="text-[10px] font-mono text-emerald-700 font-bold">
-                Jensen Huang • Nvidia
-              </span>
-              <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                Accelerated Computing and the Next Industrial Revolution
-              </h4>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono font-bold text-white bg-slate-950 rounded px-2 py-1">Listen</button>
-                <button type="button" onClick={(e) => { e.stopPropagation(); onNavigate('interview'); }} className="text-[10px] font-mono text-slate-700 border border-slate-300 rounded px-2 py-1">Transcript</button>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 

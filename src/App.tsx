@@ -98,6 +98,7 @@ export default function App() {
     'short-1',
   ]);
   const [exploreQuery, setExploreQuery] = useState<string>('');
+  const [selectedInterviewId, setSelectedInterviewId] = useState<string | null>(null);
   const [isDailyEditOpen, setIsDailyEditOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
 
@@ -121,7 +122,11 @@ export default function App() {
         setExploreQuery(param);
       } else if (screen === 'article') {
         setSelectedArticleId(param);
+      } else if (screen === 'interview') {
+        setSelectedInterviewId(param);
       }
+    } else if (screen === 'interview') {
+      setSelectedInterviewId(null);
     }
 
     if (screen === 'home') {
@@ -234,6 +239,7 @@ export default function App() {
             onNavigate={handleNavigate}
             savedIds={savedIds}
             onToggleSave={handleToggleSave}
+            initialInterviewId={selectedInterviewId}
           />
         )}
         {currentScreen === 'startups' && (

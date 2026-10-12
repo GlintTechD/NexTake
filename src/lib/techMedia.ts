@@ -147,12 +147,9 @@ export function toPublishedShorts(records: PublishedTechMedia[]) {
     .map((record, index) => toShortItem(record, SHORTS_LIST[index % SHORTS_LIST.length].thumbnail));
 }
 
-export function getUnreplacedShorts(records: PublishedTechMedia[]) {
-  const replacedIds = new Set(records
-    .filter((record) => record.media_type !== "interview")
-    .map((record) => record.source_id)
-    .filter(Boolean));
-  return SHORTS_LIST.filter((item) => !replacedIds.has(item.id));
+export function getUnreplacedShorts(_records: PublishedTechMedia[]) {
+  // Hardcoded shorts removed - only uploaded/published shorts are displayed
+  return [];
 }
 
 export function getUnreplacedInterviews(records: PublishedTechMedia[]) {

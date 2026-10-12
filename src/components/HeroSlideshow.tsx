@@ -58,12 +58,27 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
     loadArticles();
   }, []);
 
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 768;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   /*
    * =========================================================
    * CONVERT SUPABASE ARTICLES TO HERO STORIES
    * =========================================================
    */
-  const stories: HeroSlideStory[] = articles.length
+  const allStories: HeroSlideStory[] = articles.length
     ? articles.map((article, index) => ({
         id: article.id,
         articleId: article.id,
@@ -91,17 +106,27 @@ export const HeroSlideshow: React.FC<HeroSlideshowProps> = ({
         imageAperture: "",
 
         author: {
-          name: article.author || "Next Edit",
+          name: article.author || "NexTake",
           role: article.author_role || "Contributor",
           avatar:
             article.avatar ||
-            "https://ui-avatars.com/api/?name=Next+Edit",
+            "https://ui-avatars.com/api/?name=NexTake",
         },
       }))
     : HERO_SLIDESHOW_STORIES;
 
+  // Display just 5 uploads for desktop and tablet, and 4 in mobile mode
+  const maxStories = isMobile ? 4 : 5;
+  const stories: HeroSlideStory[] = allStories.slice(0, maxStories);
+
   const totalSlides = stories.length;
-  const currentStory = stories[activeIdx];
+  const currentStory = stories[activeIdx] || stories[0];
+
+  useEffect(() => {
+    if (activeIdx >= stories.length && stories.length > 0) {
+      setActiveIdx(0);
+    }
+  }, [stories.length, activeIdx]);
 
   /*
    * =========================================================
