@@ -2,11 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ScreenView, SearchResultItem } from '../types';
 import { subscribeToNewsletter } from '../lib/newsletter';
 import {
+  ALL_EXPLORE_ITEMS,
   DOMAIN_TOPICS,
   OPERATORS_LIST,
   COMPANIES_LIST,
 } from '../data/mockData';
+import { ALL_INTERVIEWS } from '../data/interviewData';
 import { getLatestPublishedStories, type LatestStory } from '../lib/latest';
+import { getPublishedTechMedia, toPublishedShorts, toInterviewItem } from '../lib/techMedia';
+import { getPublishedEmbeddedMedia } from '../lib/embeddedMedia';
 import {
   Search,
   X,
@@ -86,22 +90,160 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
   useEffect(() => {
     let mounted = true;
-    void getLatestPublishedStories().then((stories: LatestStory[]) => {
-      if (!mounted) return;
-      setPublishedItems(stories.map((story) => ({
-        id: story.id,
-        articleId: story.id,
-        type: 'story',
-        title: story.title,
-        category: story.category,
-        summary: story.description,
-        timeAgo: story.timeAgo,
-        readTime: story.readTime,
-        thumbnail: story.image,
-        author: story.author,
-        tags: [story.category],
-      })));
-    }).catch(() => mounted && setPublishedItems([]));
+
+    const loadAllExploreData = async () => {
+      try {
+        const [stories, embeddedMedia, techMedia] = await Promise.all([
+          getLatestPublishedStories().catch(() => [] as LatestStory[]),
+          getPublishedEmbeddedMedia().catch(() => []),
+          getPublishedTechMedia().catch(() => []),
+        ]);
+
+        if (!mounted) return;
+
+        // 1. Stories from published latest stories
+        const storyItems: SearchResultItem[] = stories.map((story) => ({
+          id: story.id,
+          articleId: story.id,
+          type: 'story',
+          title: story.title,
+          category: story.category,
+          summary: story.description,
+          timeAgo: story.timeAgo,
+          readTime: story.readTime,
+          thumbnail: story.image,
+          author: story.author,
+          tags: [story.category, 'Stories', 'Article'],
+        }));
+
+        // 2. Shorts from embedded uploads, CMS media, and baseline explore shorts
+        const embeddedShorts: SearchResultItem[] = embeddedMedia
+          .filter((record) => record.kind === 'short')
+          .map((record) => ({
+            id: record.id,
+            type: 'short',
+            title: record.title,
+            category: record.category || 'Technology',
+            summary: record.description || record.title,
+            duration: `${Math.floor((record.durationSeconds || 60) / 60)}:${String((record.durationSeconds || 60) % 60).padStart(2, '0')}`,
+            author: record.author || 'NexTake',
+            views: 'New',
+            thumbnail: record.thumbnail || '',
+            timeAgo: 'Recently',
+            badge: 'Uploaded Short',
+            tags: [record.category || 'Technology', 'Shorts', 'Video', ...(record.tags || [])],
+          }));
+
+        const cmsShorts: SearchResultItem[] = toPublishedShorts(techMedia).map((s) => ({
+          id: s.id,
+          type: 'short',
+          title: s.title,
+          category: s.category || 'Technology',
+          summary: s.title,
+          duration: s.duration || '0:60',
+          author: s.author || 'NexTake',
+          views: s.views || 'New',
+          thumbnail: s.thumbnail || '',
+          timeAgo: 'Recently',
+          badge: 'Published Short',
+          tags: [s.category || 'Technology', 'Shorts', 'Video'],
+        }));
+
+        const exploreMockShorts: SearchResultItem[] = ALL_EXPLORE_ITEMS.filter((i) => i.type === 'short');
+
+        // 3. Interviews from embedded uploads, CMS media, ALL_INTERVIEWS, and explore mock
+        const fallbackInterviewThumb = ALL_INTERVIEWS[0]?.thumbnail || 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=600&q=80';
+
+        const embeddedInterviews: SearchResultItem[] = embeddedMedia
+          .filter((record) => record.kind === 'interview')
+          .map((record) => ({
+            id: record.id,
+            type: 'interview',
+            title: record.title,
+            category: record.category || 'Interviews',
+            summary: record.description || record.title,
+            duration: `${Math.floor((record.durationSeconds || 1800) / 60)}:${String((record.durationSeconds || 1800) % 60).padStart(2, '0')}`,
+            author: record.guestName || record.author || 'NexTake Guest',
+            views: 'New',
+            thumbnail: record.thumbnail || fallbackInterviewThumb,
+            timeAgo: 'Recently',
+            badge: 'Uploaded Interview',
+            tags: [record.category || 'Interviews', 'Interview', 'Video', ...(record.tags || [])],
+          }));
+
+        const cmsInterviews: SearchResultItem[] = techMedia
+          .filter((m) => m.media_type === 'interview')
+          .map((m) => {
+            const item = toInterviewItem(m, fallbackInterviewThumb);
+            return {
+              id: item.id,
+              type: 'interview',
+              title: item.title,
+              category: item.category || 'Interviews',
+              summary: item.executiveSummary || item.title,
+              duration: item.duration || '24:00',
+              author: item.guest?.name || 'NexTake Guest',
+              views: item.views || 'New',
+              thumbnail: item.thumbnail || fallbackInterviewThumb,
+              timeAgo: item.uploadedAgo || 'Recently',
+              badge: 'Executive Interview',
+              tags: [item.category, 'Interview', 'Video', ...(item.tags || [])],
+            };
+          });
+
+        const allInterviewsList: SearchResultItem[] = ALL_INTERVIEWS.map((item) => ({
+          id: item.id,
+          type: 'interview',
+          title: item.title,
+          category: item.category || 'Interviews',
+          summary: item.executiveSummary || item.title,
+          duration: item.duration,
+          author: `${item.guest.name} (${item.guest.role}, ${item.guest.company})`,
+          views: item.views,
+          thumbnail: item.thumbnail || fallbackInterviewThumb,
+          timeAgo: item.uploadedAgo,
+          badge: `Episode #${item.episodeNumber || 1}`,
+          tags: [item.category, 'Interview', 'Video', ...(item.tags || [])],
+        }));
+
+        const exploreMockInterviews: SearchResultItem[] = ALL_EXPLORE_ITEMS.filter((i) => i.type === 'interview');
+
+        // 4. People (operators) & Companies (dossiers) & Baseline mock stories
+        const peopleAndCompanies: SearchResultItem[] = ALL_EXPLORE_ITEMS.filter(
+          (i) => i.type === 'operator' || i.type === 'dossier' || i.type === 'story'
+        );
+
+        // Combined: uploaded first, then stories, then media, then directories
+        const combined: SearchResultItem[] = [
+          ...embeddedShorts,
+          ...cmsShorts,
+          ...embeddedInterviews,
+          ...cmsInterviews,
+          ...storyItems,
+          ...exploreMockShorts,
+          ...allInterviewsList,
+          ...exploreMockInterviews,
+          ...peopleAndCompanies,
+        ];
+
+        // Deduplicate by ID
+        const seen = new Set<string>();
+        const unique = combined.filter((item) => {
+          if (seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        });
+
+        setPublishedItems(unique);
+      } catch (error) {
+        console.error('Failed to load explore items:', error);
+        if (mounted) {
+          setPublishedItems(ALL_EXPLORE_ITEMS);
+        }
+      }
+    };
+
+    void loadAllExploreData();
     return () => { mounted = false; };
   }, []);
 
@@ -533,10 +675,29 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                     <div
                       key={item.id}
                       onClick={() => onNavigate('shorts')}
-                      className="bg-[#090d14] text-white rounded-lg border border-slate-800 p-5 flex flex-col justify-between group cursor-pointer"
+                      className="bg-[#090d14] text-white rounded-lg border border-slate-800 p-5 flex flex-col justify-between group cursor-pointer hover:border-slate-700 transition-all shadow-sm"
                     >
                       <div>
-                        <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 mb-3">
+                        {item.thumbnail ? (
+                          <div className="aspect-video rounded overflow-hidden mb-3 relative bg-slate-900">
+                            <img
+                              src={item.thumbnail}
+                              alt={item.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-between p-2.5">
+                              <span className="text-[10px] font-mono bg-emerald-400 text-slate-950 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                                <Play className="w-2.5 h-2.5 fill-current" /> Watch Short
+                              </span>
+                              {item.duration && (
+                                <span className="text-[10px] font-mono bg-black/80 text-white px-1.5 py-0.5 rounded">
+                                  {item.duration}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
+                        <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 mb-2">
                           <span className="flex items-center space-x-1">
                             <Play className="w-3 h-3 fill-current" />
                             <span>{item.category}</span>
@@ -551,9 +712,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                         </h3>
                         <p className="text-[11px] text-slate-400 line-clamp-2">{item.summary}</p>
                       </div>
-                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-3 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-3 border-t border-slate-800 mt-3">
                         <span>{item.views}</span>
-                        <span className="text-emerald-400 font-bold">Watch clip ↗</span>
+                        <span className="text-emerald-400 font-bold group-hover:underline">Watch clip ↗</span>
                       </div>
                     </div>
                   );
@@ -600,37 +761,43 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
                 // INTERVIEW card
                 if (item.type === 'interview') {
+                  const interviewThumb = item.thumbnail || "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=600&q=80";
                   return (
                     <div
                       key={item.id}
-                      onClick={() => onNavigate('interview')}
-                      className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between cursor-pointer group"
+                      onClick={() => onNavigate('interview', item.id)}
+                      className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between cursor-pointer group hover:border-slate-400 transition-all shadow-sm"
                     >
                       <div>
                         <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
-                          <span className="text-slate-700 font-bold">{item.badge || 'The Edit Interviews'}</span>
+                          <span className="text-emerald-700 font-bold">{item.badge || 'The Edit Interviews'}</span>
                           <span>{item.category}</span>
                         </div>
                         <div className="aspect-video bg-slate-900 rounded overflow-hidden mb-3 relative">
                           <img
-                            src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=600&q=80"
+                            src={interviewThumb}
                             alt={item.title}
-                            className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform"
+                            className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform"
                           />
-                          {item.duration && (
-                            <span className="absolute bottom-2 left-2 text-[10px] font-mono bg-black/80 text-white px-2 py-0.5 rounded">
-                              {item.duration}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-2.5">
+                            {item.duration && (
+                              <span className="text-[10px] font-mono bg-black/80 text-white px-2 py-0.5 rounded">
+                                {item.duration}
+                              </span>
+                            )}
+                            <span className="text-[10px] font-mono bg-emerald-500 text-slate-950 font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                              <Play className="w-2.5 h-2.5 fill-current" /> Watch
                             </span>
-                          )}
+                          </div>
                         </div>
                         <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mb-2">
                           {item.title}
                         </h3>
                         <p className="text-xs text-slate-600 line-clamp-2">{item.summary}</p>
                       </div>
-                      <div className="flex items-center justify-between text-xs font-mono text-slate-500 pt-3 border-t border-slate-100">
-                        <span className="text-slate-500">The Edit Studio</span>
-                        <span className="text-emerald-700 font-bold">{item.category}</span>
+                      <div className="flex items-center justify-between text-xs font-mono text-slate-500 pt-3 border-t border-slate-100 mt-3">
+                        <span className="text-slate-500 truncate max-w-[180px]">{item.author || 'The Edit Studio'}</span>
+                        <span className="text-emerald-700 font-bold group-hover:underline">Watch Interview ↗</span>
                       </div>
                     </div>
                   );
