@@ -16,9 +16,6 @@ export async function getPublishedArticles() {
       if (!error && data && data.length > 0) {
         return data;
       }
-      if (error) {
-        console.warn("Supabase load articles failed:", error);
-      }
     } catch (err) {
       console.warn("Supabase load articles failed:", err);
     }
@@ -55,5 +52,6 @@ export async function getPublishedArticles() {
       // ignore
     }
   }
+
   return [];
 }
