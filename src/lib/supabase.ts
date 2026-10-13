@@ -408,22 +408,68 @@ export async function getArticleById(id: string): Promise<Article | null> {
 }
 
 export async function getPublishedBigStories(): Promise<Article[]> {
-  if (!supabase) return [];
+  const isMediaOrShortOrInterview = (item: any) => {
+    const type = String(item.content_type ?? item.contentType ?? item.type ?? '').toLowerCase();
+    const placement = String(item.media_placement ?? item.mediaPlacement ?? '').toLowerCase();
+    const cat = String(item.category ?? '').toLowerCase();
+    const video = String(item.video_url ?? item.videoUrl ?? '').trim();
+    const tags = Array.isArray(item.tags)
+      ? item.tags.map(String).join(' ').toLowerCase()
+      : String(item.tags ?? '').toLowerCase();
 
-  const { data, error } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("status", "published")
-    // Exclude YouTube Shorts, Interviews, and other media-type entries
-    // so only editorial articles appear in The Big Story section.
-    .not("content_type", "eq", "media")
-    .is("media_placement", null)
-    .order("created_at", { ascending: false });
+    if (['media', 'short', 'shorts', 'interview', 'interviews', 'video', 'videos', 'reel'].includes(type)) return true;
+    if (['short', 'interview', 'media', 'video'].includes(placement)) return true;
+    if (['shorts', 'interviews', 'videos'].includes(cat)) return true;
+    if (video && !item.body && !item.content) return true;
+    if (tags.includes('shorts') || tags.includes('#shorts') || tags.includes('interview')) return true;
+    return false;
+  };
 
-  if (error) {
-    console.error("Error loading Big Stories:", error);
-    return [];
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("articles")
+        .select("*")
+        .eq("status", "published")
+        // Exclude YouTube Shorts, Interviews, and other media-type entries
+        // so only editorial articles appear in The Big Story section.
+        .not("content_type", "eq", "media")
+        .is("media_placement", null)
+        .order("created_at", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const filtered = (data as Article[]).filter((story) => !isMediaOrShortOrInterview(story));
+        if (filtered.length > 0) {
+          return filtered;
+        }
+      }
+    } catch (err) {
+      console.error("Error loading Big Stories:", err);
+    }
   }
 
-  return (data ?? []) as Article[];
+  if (typeof fetch === 'function') {
+    try {
+      const response = await fetch('/api/public/content');
+      if (response.ok) {
+        const payload = (await response.json()) as { items?: any[] };
+        const items = (payload.items ?? [])
+          .filter((item) => {
+            const status = String(item.status ?? '').toLowerCase();
+            if (status !== 'published') return false;
+            return !isMediaOrShortOrInterview(item);
+          })
+          .sort((a, b) => new Date(b.publishedAt ?? b.published_at ?? b.createdAt ?? b.created_at ?? 0).getTime() - new Date(a.publishedAt ?? a.published_at ?? a.createdAt ?? a.created_at ?? 0).getTime());
+
+        if (items.length > 0) {
+          return items as Article[];
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  return [];
 }
+
