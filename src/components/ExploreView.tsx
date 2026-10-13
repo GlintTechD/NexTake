@@ -2,15 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ScreenView, SearchResultItem } from '../types';
 import { subscribeToNewsletter } from '../lib/newsletter';
 import {
-  ALL_EXPLORE_ITEMS,
   DOMAIN_TOPICS,
   OPERATORS_LIST,
   COMPANIES_LIST,
 } from '../data/mockData';
-import { ALL_INTERVIEWS } from '../data/interviewData';
 import { getLatestPublishedStories, type LatestStory } from '../lib/latest';
-import { getPublishedTechMedia, toPublishedShorts, toInterviewItem } from '../lib/techMedia';
-import { getPublishedEmbeddedMedia } from '../lib/embeddedMedia';
 import {
   Search,
   X,
@@ -90,161 +86,25 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
   useEffect(() => {
     let mounted = true;
+    void getLatestPublishedStories().then((stories: LatestStory[]) => {
+      if (!mounted) return;
+      setPublishedItems(stories.map((story) => ({
+        id: story.id,
+        articleId: story.id,
+        type: 'story',
+        title: story.title,
+        category: story.category,
+        summary: story.description,
+        timeAgo: story.timeAgo,
+        readTime: story.readTime,
+        thumbnail: story.image,
+        author: story.author,
+      })));
+    });
 
-    const loadAllExploreData = async () => {
-      try {
-        const [stories, embeddedMedia, techMedia] = await Promise.all([
-          getLatestPublishedStories().catch(() => [] as LatestStory[]),
-          getPublishedEmbeddedMedia().catch(() => []),
-          getPublishedTechMedia().catch(() => []),
-        ]);
-
-        if (!mounted) return;
-
-        // 1. Stories from published latest stories
-        const storyItems: SearchResultItem[] = stories.map((story) => ({
-          id: story.id,
-          articleId: story.id,
-          type: 'story',
-          title: story.title,
-          category: story.category,
-          summary: story.description,
-          timeAgo: story.timeAgo,
-          readTime: story.readTime,
-          thumbnail: story.image,
-          author: story.author,
-          tags: [story.category, 'Stories', 'Article'],
-        }));
-
-        // 2. Shorts from embedded uploads, CMS media, and baseline explore shorts
-        const embeddedShorts: SearchResultItem[] = embeddedMedia
-          .filter((record) => record.kind === 'short')
-          .map((record) => ({
-            id: record.id,
-            type: 'short',
-            title: record.title,
-            category: record.category || 'Technology',
-            summary: record.description || record.title,
-            duration: `${Math.floor((record.durationSeconds || 60) / 60)}:${String((record.durationSeconds || 60) % 60).padStart(2, '0')}`,
-            author: record.author || 'NexTake',
-            views: 'New',
-            thumbnail: record.thumbnail || '',
-            timeAgo: 'Recently',
-            badge: 'Uploaded Short',
-            tags: [record.category || 'Technology', 'Shorts', 'Video', ...(record.tags || [])],
-          }));
-
-        const cmsShorts: SearchResultItem[] = toPublishedShorts(techMedia).map((s) => ({
-          id: s.id,
-          type: 'short',
-          title: s.title,
-          category: s.category || 'Technology',
-          summary: s.title,
-          duration: s.duration || '0:60',
-          author: s.author || 'NexTake',
-          views: s.views || 'New',
-          thumbnail: s.thumbnail || '',
-          timeAgo: 'Recently',
-          badge: 'Published Short',
-          tags: [s.category || 'Technology', 'Shorts', 'Video'],
-        }));
-
-        const exploreMockShorts: SearchResultItem[] = ALL_EXPLORE_ITEMS.filter((i) => i.type === 'short');
-
-        // 3. Interviews from embedded uploads, CMS media, ALL_INTERVIEWS, and explore mock
-        const fallbackInterviewThumb = ALL_INTERVIEWS[0]?.thumbnail || 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=600&q=80';
-
-        const embeddedInterviews: SearchResultItem[] = embeddedMedia
-          .filter((record) => record.kind === 'interview')
-          .map((record) => ({
-            id: record.id,
-            type: 'interview',
-            title: record.title,
-            category: record.category || 'Interviews',
-            summary: record.description || record.title,
-            duration: `${Math.floor((record.durationSeconds || 1800) / 60)}:${String((record.durationSeconds || 1800) % 60).padStart(2, '0')}`,
-            author: record.guestName || record.author || 'NexTake Guest',
-            views: 'New',
-            thumbnail: record.thumbnail || fallbackInterviewThumb,
-            timeAgo: 'Recently',
-            badge: 'Uploaded Interview',
-            tags: [record.category || 'Interviews', 'Interview', 'Video', ...(record.tags || [])],
-          }));
-
-        const cmsInterviews: SearchResultItem[] = techMedia
-          .filter((m) => m.media_type === 'interview')
-          .map((m) => {
-            const item = toInterviewItem(m, fallbackInterviewThumb);
-            return {
-              id: item.id,
-              type: 'interview',
-              title: item.title,
-              category: item.category || 'Interviews',
-              summary: item.executiveSummary || item.title,
-              duration: item.duration || '24:00',
-              author: item.guest?.name || 'NexTake Guest',
-              views: item.views || 'New',
-              thumbnail: item.thumbnail || fallbackInterviewThumb,
-              timeAgo: item.uploadedAgo || 'Recently',
-              badge: 'Executive Interview',
-              tags: [item.category, 'Interview', 'Video', ...(item.tags || [])],
-            };
-          });
-
-        const allInterviewsList: SearchResultItem[] = ALL_INTERVIEWS.map((item) => ({
-          id: item.id,
-          type: 'interview',
-          title: item.title,
-          category: item.category || 'Interviews',
-          summary: item.executiveSummary || item.title,
-          duration: item.duration,
-          author: `${item.guest.name} (${item.guest.role}, ${item.guest.company})`,
-          views: item.views,
-          thumbnail: item.thumbnail || fallbackInterviewThumb,
-          timeAgo: item.uploadedAgo,
-          badge: `Episode #${item.episodeNumber || 1}`,
-          tags: [item.category, 'Interview', 'Video', ...(item.tags || [])],
-        }));
-
-        const exploreMockInterviews: SearchResultItem[] = ALL_EXPLORE_ITEMS.filter((i) => i.type === 'interview');
-
-        // 4. People (operators) & Companies (dossiers) & Baseline mock stories
-        const peopleAndCompanies: SearchResultItem[] = ALL_EXPLORE_ITEMS.filter(
-          (i) => i.type === 'operator' || i.type === 'dossier' || i.type === 'story'
-        );
-
-        // Combined: uploaded first, then stories, then media, then directories
-        const combined: SearchResultItem[] = [
-          ...embeddedShorts,
-          ...cmsShorts,
-          ...embeddedInterviews,
-          ...cmsInterviews,
-          ...storyItems,
-          ...exploreMockShorts,
-          ...allInterviewsList,
-          ...exploreMockInterviews,
-          ...peopleAndCompanies,
-        ];
-
-        // Deduplicate by ID
-        const seen = new Set<string>();
-        const unique = combined.filter((item) => {
-          if (seen.has(item.id)) return false;
-          seen.add(item.id);
-          return true;
-        });
-
-        setPublishedItems(unique);
-      } catch (error) {
-        console.error('Failed to load explore items:', error);
-        if (mounted) {
-          setPublishedItems(ALL_EXPLORE_ITEMS);
-        }
-      }
+    return () => {
+      mounted = false;
     };
-
-    void loadAllExploreData();
-    return () => { mounted = false; };
   }, []);
 
   const handleNewsletterSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -298,8 +158,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       if (activeFilterTab === 'STORIES') return item.type === 'story';
       if (activeFilterTab === 'PEOPLE') return item.type === 'operator';
       if (activeFilterTab === 'COMPANIES') return item.type === 'dossier';
-      if (activeFilterTab === 'VIDEOS & SHORTS')
-        return item.type === 'short' || item.type === 'interview';
       return true;
     });
   }, [queryFiltered, activeFilterTab]);
@@ -310,7 +168,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     STORIES: queryFiltered.filter((i) => i.type === 'story').length,
     PEOPLE: queryFiltered.filter((i) => i.type === 'operator').length,
     COMPANIES: queryFiltered.filter((i) => i.type === 'dossier').length,
-    'VIDEOS & SHORTS': queryFiltered.filter((i) => i.type === 'short' || i.type === 'interview').length,
   }), [queryFiltered]);
 
   const dateRangeMinutes: Record<Exclude<DateRange, 'all'>, number> = {
@@ -420,7 +277,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
           <div className="flex items-center space-x-2 text-xs text-slate-500">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            <span>{tabCounts.ALL} Results across 5 taxonomies (0.04s)</span>
+            <span>{tabCounts.ALL} Results across 4 taxonomies (0.04s)</span>
           </div>
         </div>
 
@@ -433,7 +290,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               { id: 'STORIES', label: 'Stories', count: tabCounts.STORIES },
               { id: 'PEOPLE', label: 'People', count: tabCounts.PEOPLE },
               { id: 'COMPANIES', label: 'Companies', count: tabCounts.COMPANIES },
-              { id: 'VIDEOS & SHORTS', label: 'Videos & Shorts', count: tabCounts['VIDEOS & SHORTS'] },
             ].map((tab) => (
               <button
                 key={tab.id}
