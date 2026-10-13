@@ -349,9 +349,24 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     image?: string;
     takeaways: Array<{ num: string; label: string; text: string }>;
   } | null = (() => {
-    if (publishedBigStories.length === 0) return null;
+    const editorialBigStories = publishedBigStories.filter((s: any) => {
+      const type = String(s.contentType ?? s.content_type ?? s.type ?? '').toLowerCase();
+      const placement = String(s.media_placement ?? s.mediaPlacement ?? '').toLowerCase();
+      const cat = String(s.category ?? '').toLowerCase();
+      const video = String(s.video_url ?? s.videoUrl ?? '').trim();
+      const tags = Array.isArray(s.tags) ? s.tags.map(String).join(' ').toLowerCase() : String(s.tags ?? '').toLowerCase();
 
-    const story = publishedBigStories[0];
+      if (['media', 'short', 'shorts', 'interview', 'interviews', 'video', 'videos', 'reel'].includes(type)) return false;
+      if (['short', 'interview', 'media', 'video'].includes(placement)) return false;
+      if (['shorts', 'interviews', 'videos'].includes(cat)) return false;
+      if (video && !s.content && !s.body) return false;
+      if (tags.includes('shorts') || tags.includes('#shorts') || tags.includes('interview')) return false;
+      return true;
+    });
+
+    if (editorialBigStories.length === 0) return null;
+
+    const story = editorialBigStories[0];
     const description = story.excerpt ?? story.description ?? "";
 
     return {
