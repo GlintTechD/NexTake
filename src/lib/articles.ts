@@ -14,7 +14,20 @@ export async function getPublishedArticles() {
         .order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        return data;
+        const filtered = data.filter((item: any) => {
+          const type = String(item.content_type ?? item.contentType ?? '').toLowerCase();
+          const placement = String(item.media_placement ?? '').toLowerCase();
+          const video = String(item.video_url ?? item.videoUrl ?? '').trim();
+          const tags = Array.isArray(item.tags) ? item.tags.map(String).join(' ').toLowerCase() : '';
+          if (['media', 'short', 'shorts', 'interview', 'interviews', 'video', 'videos', 'reel'].includes(type)) return false;
+          if (['short', 'interview', 'media', 'video'].includes(placement)) return false;
+          if (video && !item.body && !item.content) return false;
+          if (tags.includes('shorts') || tags.includes('#shorts') || tags.includes('interview')) return false;
+          return true;
+        });
+        if (filtered.length > 0) {
+          return filtered;
+        }
       }
     } catch (err) {
       console.warn("Supabase load articles failed:", err);
@@ -31,7 +44,13 @@ export async function getPublishedArticles() {
           .filter((item) => {
             const type = String(item.contentType ?? item.content_type ?? '').toLowerCase();
             const status = String(item.status ?? '').toLowerCase();
-            return status === 'published' && !['media', 'short', 'interview'].includes(type);
+            const video = String(item.videoUrl ?? item.video_url ?? '').trim();
+            const tags = Array.isArray(item.tags) ? item.tags.map(String).join(' ').toLowerCase() : '';
+            if (status !== 'published') return false;
+            if (['media', 'short', 'shorts', 'interview', 'interviews', 'video', 'videos', 'reel'].includes(type)) return false;
+            if (video && !item.body && !item.content) return false;
+            if (tags.includes('shorts') || tags.includes('interview')) return false;
+            return true;
           })
           .map((item) => ({
             ...item,
