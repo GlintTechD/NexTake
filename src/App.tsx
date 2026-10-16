@@ -269,6 +269,7 @@ export default function App() {
         <Footer
           onNavigate={handleNavigate}
           onOpenDailyEdit={() => setIsDailyEditOpen(true)}
+          onOpenContact={() => setIsContactOpen(true)}
         />
       )}
 

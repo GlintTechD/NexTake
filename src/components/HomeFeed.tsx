@@ -962,14 +962,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       </section>
 
-      {/* 10. STAY AHEAD OF WHAT\'S NEXT */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
-        <div className="bg-[#090d14] text-white rounded-2xl p-8 sm:p-12 border border-slate-800">
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-            Stay ahead of what&apos;s next.
-          </h2>
-        </div>
-      </section>
     </div>
   );
 };
