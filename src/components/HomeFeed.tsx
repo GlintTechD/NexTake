@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScreenView } from '../types';
-import { subscribeToNewsletter } from '../lib/newsletter';
 import { HeroSlideshow } from './HeroSlideshow';
 import { getPublishedTechMedia, toPublishedShorts, toInterviewItem, type PublishedTechMedia } from '../lib/techMedia';
 import { getPublishedEmbeddedMedia, type EmbeddedMediaRecord } from '../lib/embeddedMedia';
@@ -104,14 +103,12 @@ interface HomeFeedProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
   savedIds: string[];
   onToggleSave: (id: string) => void;
-  onOpenContact?: () => void;
 }
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({
   onNavigate,
   savedIds,
   onToggleSave,
-  onOpenContact,
 }) => {
 
 
@@ -129,10 +126,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   });
   const [followedCompanies, setFollowedCompanies] = useState<Record<string, boolean>>({});
   const [tickerIndex, setTickerIndex] = useState(0);
-  const [emailInput, setEmailInput] = useState('');
-  const [emailSubscribed, setEmailSubscribed] = useState(false);
-  const [emailError, setEmailError] = useState('');
-  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
 
   const tickerAlerts = latestArticles.length > 0
     ? latestArticles.slice(0, 6).map((article) => `${article.category} • ${article.title}`)
@@ -163,26 +156,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   const isSaved = (id: string) => savedIds.includes(id);
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailInput.trim()) return;
-
-    setIsEmailSubmitting(true);
-    setEmailError('');
-
-    try {
-      await subscribeToNewsletter(emailInput);
-      setEmailSubscribed(true);
-      setTimeout(() => setEmailSubscribed(false), 4000);
-      setEmailInput('');
-    } catch (error) {
-      console.error('Home newsletter subscribe failed:', error);
-      setEmailSubscribed(false);
-      setEmailError('Unable to save your signup. Please try again.');
-    } finally {
-      setIsEmailSubmitting(false);
-    }
-  };
   useEffect(() => {
     let isMounted = true;
 
@@ -989,66 +962,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       </section>
 
-      {/* 10. STAY AHEAD OF WHAT\'S NEXT (Newsletter CTA - matching 6.png) */}
+      {/* 10. STAY AHEAD OF WHAT\'S NEXT */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
-        <div className="bg-[#090d14] text-white rounded-2xl p-8 sm:p-12 border border-slate-800 relative overflow-hidden">
-          {/* Background decorative technical grid lines */}
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 pointer-events-none flex items-center justify-center">
-            <div className="w-64 h-64 rounded-full border border-emerald-400"></div>
-          </div>
-
-          <div className="relative z-10 max-w-2xl space-y-4">
-            <span className="text-[11px] font-mono text-emerald-400 font-bold tracking-wider">
-              Synchronize briefing
-            </span>
-
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-              Stay ahead of what&apos;s next.
-            </h2>
-
-            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                      Request the Daily Edit briefing.
-            </p>
-
-            <form onSubmit={handleEmailSubmit} className="pt-2 flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                placeholder="corporate.email@domain.com"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                required
-                className="px-4 py-3 rounded bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-emerald-400 flex-grow"
-              />
-              <button
-                type="submit"
-                disabled={isEmailSubmitting}
-                className="px-6 py-3 rounded bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider transition-colors shrink-0 disabled:cursor-wait disabled:opacity-60"
-              >
-                {isEmailSubmitting ? 'Saving...' : emailSubscribed ? 'Request received' : 'Get the Daily Edit →'}
-              </button>
-            </form>
-            {emailError && <p role="alert" className="pt-2 text-xs text-red-300">{emailError}</p>}
-
-            <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 pt-2 gap-3">
-              <div className="flex items-center space-x-3">
-                <button
-                  type="button"
-                  onClick={onOpenContact}
-                  className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors flex items-center space-x-1"
-                >
-                  <span>Contact Editorial Wire →</span>
-                </button>
-                <span className="text-slate-700">•</span>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('explore')}
-                  className="text-slate-400 hover:text-white transition-colors"
-                >
-                  Explore Archive →
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="bg-[#090d14] text-white rounded-2xl p-8 sm:p-12 border border-slate-800">
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+            Stay ahead of what&apos;s next.
+          </h2>
         </div>
       </section>
     </div>
