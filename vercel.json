@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/newsletter-digest",
+      "schedule": "0 8 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/article/:path*", "destination": "/index.html" },
     { "source": "/startup/:path*", "destination": "/index.html" },

@@ -41,17 +41,17 @@ The `VITE_` variables configure EmailJS and Supabase in the browser. They are
 included in the client bundle, so only use public credentials here. Never put
 database passwords, Resend API keys, or other server secrets in a `VITE_` value.
 
-Set `VITE_EMAILJS_SERVICE_ID`, `VITE_EMAILJS_TEMPLATE_ID`, and
-`VITE_EMAILJS_PUBLIC_KEY` to enable the contact form. Set `VITE_SUPABASE_URL`
-and `VITE_SUPABASE_ANON_KEY` (or a Supabase publishable key) to enable
+The contact form is sent server-side through Resend using `RESEND_API_KEY` and
+`CONTACT_RECIPIENT_EMAIL`. Set `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY` (or a Supabase publishable key) to enable
 Supabase-backed content. Protect the Supabase key with appropriate Row Level
 Security policies.
 Set `VITE_ENABLE_DAILY_EDIT_SETTINGS=true` only after creating the optional
 `daily_edit_settings` table in Supabase; it is disabled by default.
 
-Newsletter signup requests currently live in server memory for the current
-process session. They are not persisted or emailed; configure durable storage
-and a delivery provider before using newsletter signup in production.
+Newsletter preferences are stored in PostgreSQL. Resend sends a welcome email
+and a daily digest containing newly published posts that match the subscriber's
+selected content types.
 
 ## 3) Environment variables explained
 
@@ -71,7 +71,8 @@ This is used in `server/db.ts` to connect to PostgreSQL and create the required 
 If this is missing, database-backed content features will not work.
 
 #### `RESEND_API_KEY`
-Your API key from Resend, used to send the one-time password (OTP) email during admin login.
+Your server-side API key from Resend. It sends admin OTPs, contact inquiries,
+newsletter welcome messages, and subscriber digests.
 
 Example:
 
@@ -79,9 +80,9 @@ Example:
 RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxx"
 ```
 
-The backend uses this in `server/index.ts` when sending login emails.
+The backend uses this in `server/index.ts` for outbound email.
 
-If you do not set it in development, the server logs the OTP in the terminal instead of sending an email.
+In production, configure this key and a verified sender before enabling email.
 
 #### `SESSION_SECRET`
 This is the secret key used to sign and verify the admin session cookie and OTP challenge data.
@@ -185,17 +186,30 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/soair"
 
 The server will automatically create the required tables on startup if the database is available.
 
-## 5) Resend setup
+## 5) Resend and newsletter setup
 
-To enable real OTP emails:
+To enable OTPs, contact delivery, and newsletter emails:
 
 1. Create a Resend account
 2. Create an API key
-3. Add the key to `RESEND_API_KEY`
+3. Add it to `RESEND_API_KEY` in the server environment (never a `VITE_` variable)
 4. Verify an email sender in Resend
-5. Set `RESEND_FROM_EMAIL` to that verified sender address if needed
+5. Set `RESEND_FROM_EMAIL` to the verified sender address
+6. Set `CONTACT_RECIPIENT_EMAIL` to the inbox that should receive contact inquiries
+7. Configure `DATABASE_URL` for persistent newsletter preferences and digest delivery
+8. Set `APP_URL` to the public website URL so digest and unsubscribe links work
+9. On Vercel, set a random `CRON_SECRET`; the daily cron runs at 08:00 UTC and
+   calls `/api/cron/newsletter-digest`
 
-In development, if `RESEND_API_KEY` is missing, the server will print the OTP in the console instead of sending email.
+Newsletter subscribers can choose blog, news, announcements, projects, events,
+media, and opportunities. Each day they receive only published posts matching
+their selections. Every digest includes a signed unsubscribe link. Contact form
+submissions are delivered to `CONTACT_RECIPIENT_EMAIL`, with reply-to set to the
+sender.
+
+For local development, configure the same Resend, PostgreSQL, and `CRON_SECRET`
+variables in `.env`. To trigger a digest manually, make an authorized GET request
+to `/api/cron/newsletter-digest` with `Authorization: Bearer <CRON_SECRET>`.
 
 ## 6) Run the app locally
 

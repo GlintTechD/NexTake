@@ -44,6 +44,7 @@ export const config = {
   ADMIN_EMAIL: readEnv('ADMIN_EMAIL', 'martins14747@gmail.com'),
   CONTACT_RECIPIENT_EMAIL: readEnv('CONTACT_RECIPIENT_EMAIL', readEnv('ADMIN_EMAIL', 'martins14747@gmail.com')),
   DATABASE_URL: readEnv('DATABASE_URL'),
+  CRON_SECRET: readEnv('CRON_SECRET'),
   SUPABASE_URL: effectiveSupabaseUrl,
   SUPABASE_ANON_KEY: effectiveSupabaseAnonKey,
   RESEND_API_KEY: readEnv('RESEND_API_KEY'),

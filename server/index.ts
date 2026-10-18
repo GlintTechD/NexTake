@@ -16,6 +16,13 @@ import {
 } from './content-service';
 import { isPubliclyVisible, normalizeSlug } from './content';
 import { getLatestCommentsPage, normalizeComments } from './engagement';
+import {
+  escapeHtml,
+  newsletterContentTypes,
+  normalizeNewsletterContentTypes,
+  selectDigestContent,
+  type NewsletterContentType,
+} from './newsletter';
 
 
 declare global {
@@ -72,6 +79,7 @@ const otpChallenges = new Map<string, OtpChallenge>();
 const sessions = new Map<string, SessionRecord>();
 const contentStore = new Map<string, ContentItem>();
 const newsletterSubscribers = new Set<string>();
+const newsletterPreferences = new Map<string, NewsletterContentType[]>();
 const pageViews = new Map<string, number>();
 const publicActivities: Array<{
   id: string;
@@ -312,13 +320,14 @@ const sendContactEmail = async (submission: ContactSubmission) => {
       press: 'Press Desk Inquiry',
       corporate: 'Corporate Partnership',
     }[submission.inquiryType] || submission.inquiryType;
+  const safeInquiryLabel = escapeHtml(inquiryLabel);
+  const safeName = escapeHtml(submission.name);
+  const safeEmail = escapeHtml(submission.email);
+  const safeOrganization = escapeHtml(submission.organization ?? '');
+  const safeMessage = escapeHtml(submission.message);
 
   if (!config.RESEND_API_KEY) {
-    if (isProduction) {
-      throw new Error('RESEND_API_KEY is required in production.');
-    }
-    console.warn(`[contact] Submission received (RESEND_API_KEY not configured):`, submission);
-    return;
+    throw new Error('RESEND_API_KEY is required to send contact inquiries.');
   }
 
   const fromAddress = buildResendFromAddress(config.RESEND_FROM_EMAIL, config.RESEND_FROM_NAME);
@@ -327,36 +336,36 @@ const sendContactEmail = async (submission: ContactSubmission) => {
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
       <div style="border-bottom: 2px solid #00f2aa; padding-bottom: 12px; margin-bottom: 20px;">
         <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; font-weight: bold;">NexTake Editorial Desk</span>
-        <h2 style="margin: 6px 0 0; color: #0f172a; font-size: 20px;">New Contact Inquiry: ${inquiryLabel}</h2>
+        <h2 style="margin: 6px 0 0; color: #0f172a; font-size: 20px;">New Contact Inquiry: ${safeInquiryLabel}</h2>
       </div>
 
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
         <tr>
           <td style="padding: 8px 0; color: #64748b; width: 140px; font-weight: 600;">Sender Name:</td>
-          <td style="padding: 8px 0; color: #0f172a; font-weight: bold;">${submission.name}</td>
+          <td style="padding: 8px 0; color: #0f172a; font-weight: bold;">${safeName}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Email:</td>
-          <td style="padding: 8px 0;"><a href="mailto:${submission.email}" style="color: #059669; font-weight: 600; text-decoration: none;">${submission.email}</a></td>
+          <td style="padding: 8px 0;"><a href="mailto:${safeEmail}" style="color: #059669; font-weight: 600; text-decoration: none;">${safeEmail}</a></td>
         </tr>
         ${
           submission.organization
             ? `
         <tr>
           <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Organization:</td>
-          <td style="padding: 8px 0; color: #0f172a;">${submission.organization}</td>
+          <td style="padding: 8px 0; color: #0f172a;">${safeOrganization}</td>
         </tr>`
             : ''
         }
         <tr>
           <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Routing Type:</td>
-          <td style="padding: 8px 0; color: #0f172a;"><span style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-size: 12px;">${inquiryLabel}</span></td>
+          <td style="padding: 8px 0; color: #0f172a;"><span style="background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-size: 12px;">${safeInquiryLabel}</span></td>
         </tr>
       </table>
 
       <div style="background: #f8fafc; border-left: 4px solid #00f2aa; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
         <div style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 8px;">Message:</div>
-        <div style="font-size: 14px; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${submission.message}</div>
+        <div style="font-size: 14px; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${safeMessage}</div>
       </div>
 
       <div style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px;">
@@ -397,6 +406,142 @@ const sendContactEmail = async (submission: ContactSubmission) => {
       `${message}. Check that RESEND_FROM_EMAIL is a verified sender in your Resend dashboard.`,
     );
   }
+};
+
+const sendNewsletterWelcomeEmail = async (email: string) => {
+  if (!config.RESEND_API_KEY) {
+    if (isProduction) {
+      throw new Error('RESEND_API_KEY is required in production.');
+    }
+    console.warn('[newsletter] RESEND_API_KEY is not configured; welcome email was not sent.');
+    return false;
+  }
+
+  const fromAddress = buildResendFromAddress(config.RESEND_FROM_EMAIL, config.RESEND_FROM_NAME);
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: fromAddress,
+      to: [email],
+      subject: 'Welcome to The Daily Edit | NexTake',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #0f172a;">
+          <p style="font-size: 11px; font-weight: bold; letter-spacing: 0.1em; color: #059669; text-transform: uppercase;">NexTake</p>
+          <h1 style="font-size: 24px;">Welcome to The Daily Edit</h1>
+          <p style="font-size: 15px; line-height: 1.6;">Thanks for subscribing. You’re on the list to stay ahead of what’s next.</p>
+        </div>
+      `,
+      text: 'Thanks for subscribing to The Daily Edit. You’re on the list to stay ahead of what’s next.',
+    }),
+  });
+
+  if (!response.ok) {
+    let message = `Resend request failed with status ${response.status}.`;
+    try {
+      const payload = await response.json();
+      if (typeof payload?.message === 'string') message = payload.message;
+    } catch {
+      message = `Resend request failed with status ${response.status}.`;
+    }
+
+    throw new Error(
+      `${message} Check that RESEND_FROM_EMAIL is a verified sender in your Resend dashboard.`,
+    );
+  }
+
+  return true;
+};
+
+const sendNewsletterDigestEmail = async (
+  email: string,
+  items: Awaited<ReturnType<typeof getPublishedContent>>,
+  digestDate: string,
+) => {
+  if (!config.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is required to send newsletter digests.');
+  }
+
+  const fromAddress = buildResendFromAddress(config.RESEND_FROM_EMAIL, config.RESEND_FROM_NAME);
+  const siteUrl = config.APP_URL.replace(/\/+$/, '');
+  const unsubscribeToken = crypto
+    .createHmac('sha256', config.SESSION_SECRET)
+    .update(email)
+    .digest('hex');
+  const unsubscribeUrl = new URL('/api/public/newsletter/unsubscribe', siteUrl);
+  unsubscribeUrl.searchParams.set('email', email);
+  unsubscribeUrl.searchParams.set('token', unsubscribeToken);
+
+  const contentHtml = items
+    .map((item) => {
+      const title = escapeHtml(item.title);
+      const description = escapeHtml(item.description);
+      const category = escapeHtml(item.category);
+      const articleUrl = `${siteUrl}/article/${encodeURIComponent(item.slug)}`;
+
+      return `<li style="margin: 0 0 24px;">
+        <p style="margin: 0 0 6px; color: #059669; font-size: 11px; font-weight: bold; text-transform: uppercase;">${category}</p>
+        <h2 style="margin: 0 0 8px; font-size: 18px;"><a href="${escapeHtml(articleUrl)}" style="color: #0f172a; text-decoration: none;">${title}</a></h2>
+        <p style="margin: 0; color: #475569; line-height: 1.6;">${description}</p>
+        <p style="margin: 10px 0 0;"><a href="${escapeHtml(articleUrl)}" style="color: #047857;">Read the story →</a></p>
+      </li>`;
+    })
+    .join('');
+  const contentText = items
+    .map((item) => `${item.title}\n${item.description}\n${siteUrl}/article/${encodeURIComponent(item.slug)}`)
+    .join('\n\n');
+  const idempotencyKey = crypto
+    .createHash('sha256')
+    .update(`newsletter-digest:${email}:${digestDate}`)
+    .digest('hex');
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify({
+      from: fromAddress,
+      to: [email],
+      subject: `Your NexTake Daily Edit — ${digestDate}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #0f172a;">
+          <p style="font-size: 11px; font-weight: bold; letter-spacing: 0.1em; color: #059669; text-transform: uppercase;">NexTake · The Daily Edit</p>
+          <h1 style="font-size: 24px;">Your daily technology briefing</h1>
+          <p style="color: #475569; line-height: 1.6;">Here are the new stories matching the update types you selected.</p>
+          <ul style="list-style: none; margin: 24px 0; padding: 0;">${contentHtml}</ul>
+          <p style="border-top: 1px solid #e2e8f0; padding-top: 16px; color: #64748b; font-size: 12px;">
+            You’re receiving this because you subscribed to NexTake updates.
+            <a href="${escapeHtml(unsubscribeUrl.toString())}" style="color: #047857;">Unsubscribe</a>
+          </p>
+        </div>
+      `,
+      text: `Your NexTake Daily Edit\n\n${contentText}\n\nUnsubscribe: ${unsubscribeUrl.toString()}`,
+    }),
+  });
+
+  const responseText = await response.text();
+  let responsePayload: { id?: string; message?: string; error?: string } = {};
+  if (responseText) {
+    try {
+      responsePayload = JSON.parse(responseText) as typeof responsePayload;
+    } catch {
+      responsePayload = {};
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `${responsePayload.message ?? responsePayload.error ?? `Resend request failed with status ${response.status}.`} Check that RESEND_FROM_EMAIL is a verified sender.`,
+    );
+  }
+
+  return responsePayload.id ?? null;
 };
 
 app.use(express.json({ limit: '1mb' }));
@@ -582,7 +727,13 @@ app.get('/api/public/metrics', async (_request, response) => {
       (sum, engagement) => sum + engagement.views,
       0,
     );
-    const newsletterSubscribersCount = newsletterSubscribers.size;
+    const newsletterSubscribersCount = pool
+      ? Number(
+          (await pool.query(
+            'SELECT COUNT(*) FROM newsletter_subscribers WHERE is_active = TRUE',
+          )).rows[0]?.count ?? 0,
+        )
+      : newsletterSubscribers.size;
     const publishedCount = items.length;
     const monthlyVisitors = totalPageViews + totalArticleViews;
 
@@ -722,32 +873,267 @@ app.post('/api/public/article/:id/engagement', async (request, response) => {
 
 app.post('/api/public/newsletter', async (request, response) => {
   const email = String(request.body?.email ?? '').trim().toLowerCase();
-  const frequency = String(request.body?.frequency ?? 'daily');
+  const contentTypes = normalizeNewsletterContentTypes(request.body?.contentTypes);
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     response.status(400).json({ ok: false, message: 'Enter a valid email address.' });
     return;
   }
 
-  const isNewSubscriber = !newsletterSubscribers.has(email);
-  newsletterSubscribers.add(email);
-
-  if (isNewSubscriber) {
-    recordPublicActivity({
-      action: 'New newsletter subscriber',
-      target: email,
-      user: 'Public Site',
-      type: 'subscriber',
+  if (!contentTypes) {
+    response.status(400).json({
+      ok: false,
+      message: `Choose at least one update type: ${newsletterContentTypes.join(', ')}.`,
     });
+    return;
   }
+
+  if (!pool && isProduction) {
+    response.status(503).json({
+      ok: false,
+      message: 'Newsletter signups require DATABASE_URL so preferences and delivery status can be saved.',
+    });
+    return;
+  }
+
+  let isAlreadySubscribed: boolean;
+  try {
+    if (pool) {
+      const existing = await pool.query(
+        'SELECT is_active FROM newsletter_subscribers WHERE email = $1 LIMIT 1',
+        [email],
+      );
+      isAlreadySubscribed = Boolean(existing.rows[0]?.is_active);
+    } else {
+      isAlreadySubscribed = newsletterSubscribers.has(email);
+    }
+  } catch (error) {
+    console.error('[newsletter] Could not check subscriber status', error);
+    response.status(500).json({ ok: false, message: 'Unable to save your newsletter preferences.' });
+    return;
+  }
+
+  if (isAlreadySubscribed) {
+    try {
+      if (pool) {
+        await pool.query(
+          `UPDATE newsletter_subscribers
+           SET content_types = $2, updated_at = NOW()
+           WHERE email = $1 AND is_active = TRUE`,
+          [email, contentTypes],
+        );
+      } else {
+        newsletterPreferences.set(email, contentTypes);
+      }
+    } catch (error) {
+      console.error('[newsletter] Could not update subscriber preferences', error);
+      response.status(500).json({ ok: false, message: 'Unable to update your newsletter preferences.' });
+      return;
+    }
+
+    response.json({
+      ok: true,
+      message: 'Your newsletter preferences have been updated.',
+      email,
+      emailSent: false,
+      alreadySubscribed: true,
+      contentTypes,
+    });
+    return;
+  }
+
+  let emailSent: boolean;
+  try {
+    emailSent = await sendNewsletterWelcomeEmail(email);
+  } catch (error) {
+    console.error('[newsletter] Welcome email failed', error);
+    response.status(502).json({ ok: false, message: 'Unable to send your signup email. Please try again.' });
+    return;
+  }
+
+  try {
+    if (pool) {
+      await pool.query(
+        `INSERT INTO newsletter_subscribers (email, content_types, is_active, subscribed_at, updated_at, unsubscribed_at)
+         VALUES ($1, $2, TRUE, NOW(), NOW(), NULL)
+         ON CONFLICT (email) DO UPDATE
+         SET content_types = EXCLUDED.content_types,
+             is_active = TRUE,
+             subscribed_at = CASE
+               WHEN newsletter_subscribers.is_active THEN newsletter_subscribers.subscribed_at
+               ELSE NOW()
+             END,
+             updated_at = NOW(),
+             unsubscribed_at = NULL`,
+        [email, contentTypes],
+      );
+    } else {
+      newsletterSubscribers.add(email);
+      newsletterPreferences.set(email, contentTypes);
+    }
+  } catch (error) {
+    console.error('[newsletter] Could not save subscription', error);
+    response.status(500).json({ ok: false, message: 'Unable to save your newsletter subscription.' });
+    return;
+  }
+
+  recordPublicActivity({
+    action: 'New newsletter subscriber',
+    target: email,
+    user: 'Public Site',
+    type: 'subscriber',
+  });
 
   response.json({
     ok: true,
     message: 'Subscription saved.',
     email,
-    frequency,
-    newsletterSubscribers: newsletterSubscribers.size,
+    emailSent,
+    alreadySubscribed: false,
+    contentTypes,
   });
+});
+
+app.get('/api/public/newsletter/unsubscribe', async (request, response) => {
+  const email = String(request.query.email ?? '').trim().toLowerCase();
+  const token = String(request.query.token ?? '');
+  const expectedToken = crypto
+    .createHmac('sha256', config.SESSION_SECRET)
+    .update(email)
+    .digest('hex');
+
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ||
+    !constantTimeEqual(token, expectedToken)
+  ) {
+    response.status(400).type('text').send('This unsubscribe link is invalid.');
+    return;
+  }
+
+  if (!pool && isProduction) {
+    response.status(503).type('text').send('Newsletter preferences are temporarily unavailable.');
+    return;
+  }
+
+  try {
+    if (pool) {
+      await pool.query(
+        `UPDATE newsletter_subscribers
+         SET is_active = FALSE, unsubscribed_at = NOW(), updated_at = NOW()
+         WHERE email = $1`,
+        [email],
+      );
+    } else {
+      newsletterSubscribers.delete(email);
+      newsletterPreferences.delete(email);
+    }
+
+    response.status(200).type('text').send('You have been unsubscribed from NexTake email updates.');
+  } catch (error) {
+    console.error('[newsletter] Unsubscribe failed', error);
+    response.status(500).type('text').send('Unable to unsubscribe right now. Please try again later.');
+  }
+});
+
+app.get('/api/cron/newsletter-digest', async (request, response) => {
+  if (!config.CRON_SECRET) {
+    response.status(503).json({ ok: false, message: 'CRON_SECRET is not configured.' });
+    return;
+  }
+
+  const authorization = request.header('authorization') ?? '';
+  if (!constantTimeEqual(authorization, `Bearer ${config.CRON_SECRET}`)) {
+    response.status(401).json({ ok: false, message: 'Unauthorized.' });
+    return;
+  }
+
+  if (!pool) {
+    response.status(503).json({ ok: false, message: 'Newsletter digests require DATABASE_URL.' });
+    return;
+  }
+
+  const now = new Date();
+  const digestDate = now.toISOString().slice(0, 10);
+  const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  try {
+    await pool.query(
+      `UPDATE newsletter_digest_deliveries
+       SET status = 'failed', error = 'A previous delivery attempt did not finish.'
+       WHERE status = 'processing' AND created_at < NOW() - INTERVAL '30 minutes'`,
+    );
+    const subscribers = await pool.query(
+      'SELECT email, content_types FROM newsletter_subscribers WHERE is_active = TRUE ORDER BY subscribed_at',
+    );
+    const publishedContent = await getPublishedContent();
+    const recentContent = selectDigestContent(
+      publishedContent,
+      [...newsletterContentTypes],
+      since,
+      now,
+    );
+
+    for (const subscriber of subscribers.rows as Array<{ email: string; content_types: unknown }>) {
+      const contentTypes = normalizeNewsletterContentTypes(subscriber.content_types);
+      if (!contentTypes) {
+        console.error(`[newsletter] Invalid stored content types for subscriber ${subscriber.email}`);
+        failed += 1;
+        continue;
+      }
+
+      const selectedTypes = new Set(contentTypes);
+      const digestItems = recentContent.filter((item) => selectedTypes.has(item.contentType));
+      if (digestItems.length === 0) {
+        skipped += 1;
+        continue;
+      }
+
+      const claim = await pool.query(
+        `INSERT INTO newsletter_digest_deliveries (recipient_email, digest_date, status)
+         VALUES ($1, $2, 'processing')
+         ON CONFLICT (recipient_email, digest_date) DO UPDATE
+         SET status = 'processing', error = NULL, created_at = NOW()
+         WHERE newsletter_digest_deliveries.status = 'failed'
+         RETURNING recipient_email`,
+        [subscriber.email, digestDate],
+      );
+      if (claim.rowCount === 0) {
+        skipped += 1;
+        continue;
+      }
+
+      try {
+        const resendId = await sendNewsletterDigestEmail(subscriber.email, digestItems, digestDate);
+        await pool.query(
+          `UPDATE newsletter_digest_deliveries
+           SET status = 'sent', resend_id = $3, sent_at = NOW(), error = NULL
+           WHERE recipient_email = $1 AND digest_date = $2`,
+          [subscriber.email, digestDate, resendId],
+        );
+        sent += 1;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown Resend error.';
+        await pool.query(
+          `UPDATE newsletter_digest_deliveries
+           SET status = 'failed', error = $3
+           WHERE recipient_email = $1 AND digest_date = $2`,
+          [subscriber.email, digestDate, message.slice(0, 1000)],
+        );
+        console.error(`[newsletter] Daily digest failed for subscriber ${subscriber.email}`, error);
+        failed += 1;
+      }
+    }
+
+    response
+      .status(failed === 0 ? 200 : 502)
+      .json({ ok: failed === 0, digestDate, sent, skipped, failed });
+  } catch (error) {
+    console.error('[newsletter] Daily digest job failed', error);
+    response.status(500).json({ ok: false, message: 'Unable to process the newsletter digest.' });
+  }
 });
 
 app.post('/api/public/contact', async (request, response) => {
@@ -769,6 +1155,11 @@ app.post('/api/public/contact', async (request, response) => {
 
   if (!message) {
     response.status(400).json({ ok: false, message: 'Message content cannot be empty.' });
+    return;
+  }
+
+  if (name.length > 200 || organization.length > 200 || message.length > 10000) {
+    response.status(400).json({ ok: false, message: 'Contact details exceed the allowed length.' });
     return;
   }
 

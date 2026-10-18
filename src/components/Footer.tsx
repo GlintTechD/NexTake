@@ -3,6 +3,16 @@ import { ScreenView } from '../types';
 import { Mail, Shield, ArrowUpRight, CheckCircle2, Send } from 'lucide-react';
 import logo from "../Pic/Logo.png";
 
+const newsletterContentTypes = [
+  { value: 'blog', label: 'Blog' },
+  { value: 'news', label: 'News' },
+  { value: 'announcement', label: 'Announcements' },
+  { value: 'project', label: 'Projects' },
+  { value: 'event', label: 'Events' },
+  { value: 'media', label: 'Media' },
+  { value: 'opportunity', label: 'Opportunities' },
+] as const;
+
 interface FooterProps {
   onNavigate: (screen: ScreenView, param?: string) => void;
   onOpenDailyEdit: () => void;
@@ -11,8 +21,12 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onOpenContact }) => {
   const [email, setEmail] = useState('');
-  const [frequency] = useState<'daily' | 'weekend' | 'all'>('daily');
+  const [contentTypes, setContentTypes] = useState<string[]>(
+    newsletterContentTypes.map(({ value }) => value),
+  );
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [welcomeEmailSent, setWelcomeEmailSent] = useState(false);
+  const [preferencesUpdated, setPreferencesUpdated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subscribeError, setSubscribeError] = useState('');
   const [footerLogo, setFooterLogo] = useState<string>(() => {
@@ -41,14 +55,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, frequency }),
+        body: JSON.stringify({ email, contentTypes }),
       });
 
       if (!response.ok) {
         throw new Error('Unable to save subscription.');
       }
 
+      const result = await response.json() as {
+        emailSent?: boolean;
+        alreadySubscribed?: boolean;
+      };
       setIsSubscribed(true);
+      setWelcomeEmailSent(Boolean(result.emailSent));
+      setPreferencesUpdated(Boolean(result.alreadySubscribed));
     } catch (error) {
       console.error('Newsletter subscribe failed:', error);
       setIsSubscribed(false);
@@ -84,8 +104,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
                       Telemetry Synchronized
                     </h4>
                     <p className="text-xs text-slate-400 mt-1">
-                      Welcome to The Daily Edit. A confirmation token has been dispatched to{' '}
-                      <span className="text-emerald-400 font-mono font-semibold">{email}</span>.
+                      {preferencesUpdated
+                        ? 'Your newsletter update preferences have been saved.'
+                        : welcomeEmailSent
+                          ? <>Welcome to The Daily Edit. A message has been sent to{' '}
+                            <span className="text-emerald-400 font-mono font-semibold">{email}</span>.</>
+                          : 'Your subscription is saved. Email delivery is not configured in this environment.'}
                     </p>
                   </div>
                   <div className="pt-2 flex items-center justify-center gap-3">
@@ -100,6 +124,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
                       type="button"
                       onClick={() => {
                         setIsSubscribed(false);
+                        setWelcomeEmailSent(false);
+                        setPreferencesUpdated(false);
                         setEmail('');
                       }}
                       className="text-xs text-slate-400 hover:text-white underline font-mono"
@@ -122,10 +148,39 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
                     />
                   </div>
 
+                  <fieldset className="mx-auto max-w-xl rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-left">
+                    <legend className="px-2 text-[11px] font-mono font-bold uppercase tracking-wider text-slate-300">
+                      Choose your updates
+                    </legend>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                      {newsletterContentTypes.map(({ value, label }) => (
+                        <label key={value} className="flex items-center gap-2 text-xs text-slate-300">
+                          <input
+                            type="checkbox"
+                            value={value}
+                            checked={contentTypes.includes(value)}
+                            onChange={(event) => {
+                              setContentTypes((current) =>
+                                event.target.checked
+                                  ? [...current, value]
+                                  : current.filter((type) => type !== value),
+                              );
+                            }}
+                            className="accent-emerald-400"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  {contentTypes.length === 0 && (
+                    <p className="text-xs text-amber-300">Choose at least one update type to subscribe.</p>
+                  )}
+
                   <div className="flex flex-col sm:flex-row gap-2.5 justify-center mx-auto max-w-xl">
                     <button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || contentTypes.length === 0}
                       className="min-h-[44px] flex-1 px-6 py-3 rounded-xl bg-[#00f2aa] hover:bg-[#00df9c] text-slate-950 font-mono font-bold text-xs tracking-wider flex items-center justify-center space-x-2 transition-all shadow-[0_0_20px_rgba(0,242,170,0.25)] hover:shadow-[0_0_25px_rgba(0,242,170,0.4)] active:scale-95 disabled:opacity-60"
                     >
                       {isSubmitting ? (

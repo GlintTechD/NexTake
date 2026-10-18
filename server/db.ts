@@ -71,6 +71,26 @@ const runSchema = async () => {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      email TEXT PRIMARY KEY,
+      content_types TEXT[] NOT NULL DEFAULT ARRAY['blog', 'news', 'announcement', 'project', 'event', 'media', 'opportunity'],
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      subscribed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      unsubscribed_at TIMESTAMPTZ
+    );
+
+    CREATE TABLE IF NOT EXISTS newsletter_digest_deliveries (
+      recipient_email TEXT NOT NULL REFERENCES newsletter_subscribers(email) ON DELETE CASCADE,
+      digest_date DATE NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('processing', 'sent', 'failed')),
+      resend_id TEXT,
+      error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      sent_at TIMESTAMPTZ,
+      PRIMARY KEY (recipient_email, digest_date)
+    );
   `);
 };
 
