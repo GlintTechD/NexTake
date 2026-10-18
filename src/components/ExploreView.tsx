@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ScreenView, SearchResultItem } from '../types';
-import { subscribeToNewsletter } from '../lib/newsletter';
 import {
   DOMAIN_TOPICS,
   OPERATORS_LIST,
@@ -80,9 +79,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const [resultSort, setResultSort] = useState<ResultSort>('relevance');
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterStatus, setNewsletterStatus] = useState<'success' | 'error' | null>(null);
-  const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -106,23 +102,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       mounted = false;
     };
   }, []);
-
-  const handleNewsletterSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsNewsletterSubmitting(true);
-    setNewsletterStatus(null);
-
-    try {
-      await subscribeToNewsletter(newsletterEmail);
-      setNewsletterEmail('');
-      setNewsletterStatus('success');
-    } catch (error) {
-      console.error('Explore newsletter subscribe failed:', error);
-      setNewsletterStatus('error');
-    } finally {
-      setIsNewsletterSubmitting(false);
-    }
-  };
 
   const trendingQueries = [
     'AI Agents',
@@ -812,52 +791,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
       </>}
 
-      {/* 6. Newsletter Banner (matching 2.png) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="bg-[#090d14] text-white rounded-xl p-8 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-1">
-            <span className="text-[11px] font-mono text-emerald-400 font-bold">
-              • The Daily Edit Wire
-            </span>
-            <h2 className="text-2xl font-black">
-              Stay ahead of what's next.
-            </h2>
-            <p className="text-xs text-slate-400">
-              Request the Daily Edit briefing. Signup requests stay in server memory for the current session; email delivery is not enabled yet.
-            </p>
-          </div>
-
-          <form onSubmit={handleNewsletterSubmit} className="w-full min-w-0 md:w-auto">
-            <input
-              type="email"
-              aria-label="Email address"
-              autoComplete="email"
-              required
-              value={newsletterEmail}
-              onChange={(event) => setNewsletterEmail(event.target.value)}
-              placeholder="corporate.email@domain.com"
-              className="mb-2 w-full min-w-0 rounded border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 md:mb-0 md:w-56"
-            />
-            <button
-              type="submit"
-              disabled={isNewsletterSubmitting}
-              className="w-full shrink-0 rounded bg-[#00f2aa] px-4 py-2 text-slate-950 font-mono font-bold text-xs tracking-wider hover:bg-[#00df9c] transition-colors disabled:cursor-wait disabled:opacity-60 md:w-auto"
-            >
-              {isNewsletterSubmitting ? 'Saving...' : 'Subscribe'}
-            </button>
-            {newsletterStatus && (
-              <p
-                role={newsletterStatus === 'error' ? 'alert' : 'status'}
-                className={`mt-2 text-xs ${newsletterStatus === 'error' ? 'text-red-300' : 'text-emerald-300'}`}
-              >
-                {newsletterStatus === 'success'
-                  ? 'Request saved for this server session. Email delivery is not enabled yet.'
-                  : 'Unable to save your signup. Please try again.'}
-              </p>
-            )}
-          </form>
-        </div>
-      </section>
     </div>
   );
 };
