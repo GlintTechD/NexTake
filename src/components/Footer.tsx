@@ -69,6 +69,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDailyEdit, onO
             <h2 className="max-w-5xl text-3xl sm:text-4xl lg:text-6xl font-black text-white tracking-[-0.04em] leading-[0.95] drop-shadow-[0_0_18px_rgba(255,255,255,0.08)] mb-6">
               Stay ahead of what&apos;s next.
             </h2>
+            <p className="mb-6 text-sm font-mono text-slate-300 sm:text-base">
+              Subscribe to our daily edit newsletter.
+            </p>
 
             <div className="w-full max-w-2xl">
               {isSubscribed ? (
