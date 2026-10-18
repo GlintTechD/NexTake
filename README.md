@@ -200,6 +200,8 @@ To enable OTPs, contact delivery, and newsletter emails:
 8. Set `APP_URL` to the public website URL so digest and unsubscribe links work
 9. On Vercel, set a random `CRON_SECRET`; the daily cron runs at 08:00 UTC and
    calls `/api/cron/newsletter-digest`
+10. Deploy the project to Vercel from the repository root. The
+    `api/[...path].ts` function routes `/api/*` requests to the Express server.
 
 Newsletter subscribers can choose blog, news, announcements, projects, events,
 media, and opportunities. Each day they receive only published posts matching
